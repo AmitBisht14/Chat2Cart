@@ -38,8 +38,7 @@ Repository: AmitBisht14/Chat2Cart (default branch `main`).
       whatsapp/connection.ts    Baileys socket, auth state, reconnect
       whatsapp/login.ts         QR and pairing-code login flows
       whatsapp/state.ts         writes whatsapp_state (state + heartbeat)
-      intake/senderFilter.ts    phone/@lid matching
-      intake/lidMap.ts          lid_map table read/write
+      intake/senderFilter.ts    phone/@lid matching, including lid_map table reads and writes
       intake/rules.ts           direct-chat/text-only/fromMe rules
       intake/inbox.ts           INSERT OR IGNORE into inbound_messages
     test/                       vitest tests, mirrors src/
@@ -54,16 +53,14 @@ Repository: AmitBisht14/Chat2Cart (default branch `main`).
       db/connection.py          sqlite3 connection factory (WAL, foreign keys)
       db/migrate.py             applies db/migrations/NNN_*.sql in order, records schema_meta.version
       db/migrations/001_init.sql
-      db/repos.py               small repository functions per table
+      db/repos.py               small SQL helper functions, created by the first story that needs one
       swiggy/oauth.py           DCR, PKCE S256, localhost callback server, code exchange
       swiggy/tokens.py          TokenSet model, TokenManager (refresh, rotation, needs_login)
       swiggy/errors.py          SwiggyError hierarchy (AuthError, BadInputError, UpstreamError, DomainError, BlockedToolError, NeedsLoginError)
       swiggy/allowlist.py       ALLOWED_TOOLS (PROTECTED FILE)
       swiggy/client.py          SwiggyClient: MCP Python SDK streamable HTTP, auth, allowlist check, retries
-      swiggy/addresses.py       list/choose addresses
       swiggy/products.py        Product/Variant models, search()
       swiggy/cart.py            Cart models, read_cart(), write_cart() (full replacement)
-      swiggy/history.py         go-to items, recent orders
       llm/adapter.py            LLMAdapter over a LangChain chat model, structured output
       llm/prompts.py            prompt templates
       understanding/schemas.py  pydantic: Intent, ExtractedItem, ResolvedItem, SkippedItem
@@ -72,21 +69,20 @@ Repository: AmitBisht14/Chat2Cart (default branch `main`).
       understanding/rulebook.py parser + validation + reload
       understanding/preferences.py   apply rule book
       understanding/resolve.py  variant choice + unit conversion
-      understanding/hints.py    go-to/order-history tie breaking
+      understanding/hints.py    load_hints(): go-to items and recent orders for tie breaking
       understanding/dedupe.py   normalise + merge
       cart/merge.py             read-merge-write-verify
-      cart/worker.py            single serial worker over cart_jobs
-      cart/outcomes.py          min order, serviceability, stock outcome handling
+      cart/worker.py            enqueue_job() and run_next_job(): one job at a time over cart_jobs
+      cart/outcomes.py          MIN_ORDER_RUPEES and the not-serviceable check
       pipeline/state.py         OrderState TypedDict/pydantic
       pipeline/graph.py         LangGraph StateGraph build_graph()
       pipeline/nodes.py         node functions
       scheduling/window.py
-      scheduling/queue.py
       scheduling/release.py     APScheduler job at 07:00 Asia/Kolkata + catch-up
       scheduling/batching.py    overnight merge + daytime debounce
-      notify/base.py            Notifier protocol, Notification model
-      notify/macos.py           osascript notifier
-      notify/summary.py         CartSummary composer
+      notify/base.py            notify(kind, title, body): sends through the configured channel
+      notify/macos.py           send_macos(title, body) via osascript
+      notify/summary.py         builds the cart summary text
       ops/failures.py           failure policy + alert de-duplication
       ops/status.py             status report
     tests/                      pytest; tests/fakes/ (FakeSwiggyTransport, FakeLLM, InMemorySecretStore), tests/fixtures/ (recorded JSON)
