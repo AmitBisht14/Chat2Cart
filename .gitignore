@@ -1,0 +1,14 @@
+.env
+wa-session/
+data/
+*.sqlite*
+*.db*
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+dist/
+logs/
+*.log

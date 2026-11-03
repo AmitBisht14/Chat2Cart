@@ -1,0 +1,32 @@
+[project]
+name = "chat2cart"
+version = "0.1.0"
+description = "Turns WhatsApp messages into a ready Swiggy Instamart cart."
+requires-python = ">=3.12"
+dependencies = ["typer"]
+
+[project.scripts]
+chat2cart = "chat2cart.cli:app"
+
+[dependency-groups]
+dev = ["pytest", "ruff", "mypy"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chat2cart"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
