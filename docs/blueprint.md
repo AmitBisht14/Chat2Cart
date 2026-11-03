@@ -128,6 +128,17 @@ Stories may add columns or tables only through a new numbered migration file, an
 - Keep each story's change scoped to its plan; note follow-ups as new issues instead of expanding scope.
 - Commit messages: Conventional Commits, e.g. `feat(agent): ...`, ending with the story reference `Refs #N`.
 
+## Keep it simple (applies to every story)
+- Write the least code that meets the acceptance criteria. A simple story should be a small diff.
+- Prefer plain functions and small dataclasses or pydantic models. Do not add classes, protocols, base classes,
+  factories, registries or plugin systems unless the story needs two real implementations now.
+- Do not add settings, CLI flags, commands, tables, columns or migrations that the acceptance criteria do not ask for.
+- Use a well-known library instead of hand-written infrastructure when it removes code (for example tenacity
+  for retries, keyring for the Keychain, APScheduler for schedules).
+- No speculative hooks or "for later" code. Later stories add what they need.
+- Tests: about one focused test per acceptance criterion; no exhaustive matrices. Reuse the shared fakes.
+- If the plan and this section disagree about size, choose the simpler option that still meets every criterion.
+
 ## Plan format (Markdown, used inside the issue body under the existing "## Implementation plan" heading)
 Write the plan body WITHOUT the "## Implementation plan" heading itself (it already exists). Use exactly these
 sub-headings, in this order:
@@ -136,14 +147,14 @@ sub-headings, in this order:
 
 **Files**: bullet list of files to create or modify, each with a short purpose. Use blueprint paths.
 
-**Steps**: numbered, concrete, ordered steps Claude follows. 5 to 12 steps. Name functions/classes/CLI commands.
+**Steps**: numbered, concrete, ordered steps Claude follows. 3 to 8 steps. Name only the public functions and commands other stories use.
 
 **Tests**: bullet list of the tests to add (test file path + what each asserts).
 
 **Out of scope**: 1 to 4 bullets of what NOT to do in this story (belongs to another story; reference P-number).
 
 **Definition of done**: 2 to 4 bullets; always include "All acceptance criteria above are met" and "`make check` passes".
-For stories labelled needs-manual-check, add a bullet saying which manual step the user performs and that the
-runner must stop for the user after the code is merged.
+For stories labelled needs-manual-check, add a bullet saying which manual step the user performs; the runner leaves
+the pull request open and the user merges it after the check.
 
-Style: plain, specific, no filler, 250 to 550 words per plan. Use the exact tool names, table names and paths above.
+Style: plain, specific, no filler, 120 to 350 words per plan. Use the exact tool names, table names and paths above.
