@@ -1,7 +1,9 @@
 import os
 from collections.abc import Iterator
 
+import keyring
 import pytest
+from keyring.backends import fail
 
 VALID_ENV = {
     "CHAT2CART_SENDER_PHONE": "919876543210",
@@ -23,3 +25,12 @@ def valid_env(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     for name, value in VALID_ENV.items():
         monkeypatch.setenv(name, value)
     return dict(VALID_ENV)
+
+
+@pytest.fixture(autouse=True)
+def block_real_keychain() -> Iterator[None]:
+    previous = keyring.get_keyring()
+    # keyring ships fail.Keyring without type hints.
+    keyring.set_keyring(fail.Keyring())  # type: ignore[no-untyped-call]
+    yield
+    keyring.set_keyring(previous)
