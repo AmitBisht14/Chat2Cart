@@ -1,6 +1,7 @@
 import typer
 
 from chat2cart.config import load_settings
+from chat2cart.logging import configure_logging
 from chat2cart.secrets import LLM_API_KEY, KeychainSecretStore, SecretStore
 
 SECRET_NAMES = {"llm-api-key": LLM_API_KEY}
@@ -14,7 +15,7 @@ app.add_typer(secrets_app, name="secrets")
 @app.callback()
 def main() -> None:
     """Chat2Cart command line."""
-    load_settings()
+    configure_logging(load_settings())
 
 
 def build_secret_store() -> SecretStore:
