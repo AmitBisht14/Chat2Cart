@@ -1,0 +1,25 @@
+# Run Chat2Cart's tooling without installing Node.js, Python or uv on your machine.
+#   docker compose run --rm check    install dependencies, then lint, typecheck and test both parts
+#   docker compose run --rm shell    open a shell in the same environment
+x-toolchain: &toolchain
+  build: .
+  volumes:
+    - .:/app
+    # Dependencies live in volumes so they never clash with a host install.
+    - listener-node-modules:/app/listener/node_modules
+    - agent-venv:/app/agent/.venv
+
+services:
+  check:
+    <<: *toolchain
+    command: sh -c "make install && make check"
+
+  shell:
+    <<: *toolchain
+    command: bash
+    stdin_open: true
+    tty: true
+
+volumes:
+  listener-node-modules:
+  agent-venv:
