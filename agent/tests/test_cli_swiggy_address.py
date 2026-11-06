@@ -1,15 +1,11 @@
 from pathlib import Path
 
-import httpx
 import pytest
-from fakes.swiggy import FakeSwiggyTransport, RecordingSleep, load_swiggy_fixture
-from fakes.tokens import FakeTokenEndpoint, manager_for, stored_tokens
+from fakes.swiggy import FakeSwiggyTransport, load_swiggy_fixture, use_fake_swiggy
 from typer.testing import CliRunner
 
 from chat2cart.cli import app
 from chat2cart.config import load_settings
-from chat2cart.secrets import InMemorySecretStore
-from chat2cart.swiggy.client import SwiggyClient
 
 ENV_CONTENT = (
     "CHAT2CART_SENDER_PHONE=919876543210\n"
@@ -28,26 +24,13 @@ def env_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, valid_env: dict[st
     return path
 
 
-def use_swiggy(
-    monkeypatch: pytest.MonkeyPatch, transport: FakeSwiggyTransport, *, logged_in: bool = True
-) -> None:
-    store = InMemorySecretStore()
-    if logged_in:
-        stored_tokens(store, seconds_left=3600)
-
-    def build(http: httpx.Client) -> SwiggyClient:
-        return SwiggyClient(manager_for(store, FakeTokenEndpoint()), transport, RecordingSleep())
-
-    monkeypatch.setattr("chat2cart.cli.build_swiggy_client", build)
-
-
 def test_all_addresses_across_pages_are_listed_and_the_choice_is_saved(
     env_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     transport = FakeSwiggyTransport(
         load_swiggy_fixture("get_addresses_page1"), load_swiggy_fixture("get_addresses_page2")
     )
-    use_swiggy(monkeypatch, transport)
+    use_fake_swiggy(monkeypatch, transport)
 
     result = CliRunner().invoke(app, ["swiggy", "address"], input="2\n")
 
@@ -62,7 +45,7 @@ def test_all_addresses_across_pages_are_listed_and_the_choice_is_saved(
 def test_no_saved_address_explains_where_to_add_one(
     env_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    use_swiggy(monkeypatch, FakeSwiggyTransport(load_swiggy_fixture("get_addresses_empty")))
+    use_fake_swiggy(monkeypatch, FakeSwiggyTransport(load_swiggy_fixture("get_addresses_empty")))
 
     result = CliRunner().invoke(app, ["swiggy", "address"])
 
@@ -75,7 +58,7 @@ def test_only_the_get_addresses_tool_is_called(
     env_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     transport = FakeSwiggyTransport(load_swiggy_fixture("get_addresses_page2"))
-    use_swiggy(monkeypatch, transport)
+    use_fake_swiggy(monkeypatch, transport)
 
     CliRunner().invoke(app, ["swiggy", "address"], input="1\n")
 
@@ -85,7 +68,7 @@ def test_only_the_get_addresses_tool_is_called(
 def test_a_number_outside_the_list_is_asked_again(
     env_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    use_swiggy(monkeypatch, FakeSwiggyTransport(load_swiggy_fixture("get_addresses_page2")))
+    use_fake_swiggy(monkeypatch, FakeSwiggyTransport(load_swiggy_fixture("get_addresses_page2")))
 
     result = CliRunner().invoke(app, ["swiggy", "address"], input="9\n3\n")
 
@@ -95,7 +78,7 @@ def test_a_number_outside_the_list_is_asked_again(
 
 
 def test_not_logged_in_asks_for_a_login(env_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    use_swiggy(monkeypatch, FakeSwiggyTransport({}), logged_in=False)
+    use_fake_swiggy(monkeypatch, FakeSwiggyTransport({}), logged_in=False)
 
     result = CliRunner().invoke(app, ["swiggy", "address"])
 
@@ -106,7 +89,7 @@ def test_not_logged_in_asks_for_a_login(env_file: Path, monkeypatch: pytest.Monk
 def test_an_unexpected_response_is_reported_not_shown_as_no_addresses(
     env_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    use_swiggy(monkeypatch, FakeSwiggyTransport({"success": True, "data": {"places": []}}))
+    use_fake_swiggy(monkeypatch, FakeSwiggyTransport({"success": True, "data": {"places": []}}))
 
     result = CliRunner().invoke(app, ["swiggy", "address"])
 

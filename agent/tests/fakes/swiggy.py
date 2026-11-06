@@ -2,6 +2,9 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+import httpx
+import pytest
+
 from chat2cart.secrets import InMemorySecretStore
 from chat2cart.swiggy.client import SwiggyClient
 from fakes.tokens import FakeTokenEndpoint, manager_for, stored_tokens
@@ -55,3 +58,17 @@ def logged_in_client(transport: FakeSwiggyTransport) -> SwiggyClient:
     store = InMemorySecretStore()
     stored_tokens(store, seconds_left=3600)
     return SwiggyClient(manager_for(store, FakeTokenEndpoint()), transport, RecordingSleep())
+
+
+def use_fake_swiggy(
+    monkeypatch: pytest.MonkeyPatch, transport: FakeSwiggyTransport, *, logged_in: bool = True
+) -> None:
+    """Make the CLI talk to the fake transport instead of Swiggy."""
+    store = InMemorySecretStore()
+    if logged_in:
+        stored_tokens(store, seconds_left=3600)
+
+    def build(http: httpx.Client) -> SwiggyClient:
+        return SwiggyClient(manager_for(store, FakeTokenEndpoint()), transport, RecordingSleep())
+
+    monkeypatch.setattr("chat2cart.cli.build_swiggy_client", build)

@@ -1,6 +1,7 @@
+import re
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from chat2cart.swiggy.client import SwiggyClient
 from chat2cart.swiggy.errors import BadInputError, SwiggyError
@@ -13,7 +14,7 @@ class CartItem(BaseModel):
 
     spin_id: str = Field(alias="spinId")
     sku_id: str = Field(alias="skuId")
-    name: str
+    name: str = Field(alias="itemName")
     quantity: int
     requested_quantity: int | None = Field(default=None, alias="requestedQuantity")
 
@@ -22,7 +23,13 @@ class Cart(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     items: list[CartItem]
-    bill_total: Decimal = Field(alias="billTotal")
+    bill_total: Decimal = Field(alias="cartTotalAmount")
+
+    @field_validator("bill_total", mode="before")
+    @classmethod
+    def _numeric_total(cls, value: object) -> object:
+        # Swiggy sends the total as text; drop a currency sign or thousands separators if present.
+        return re.sub(r"[^\d.]", "", value) if isinstance(value, str) else value
 
 
 class CartWriteResult(BaseModel):

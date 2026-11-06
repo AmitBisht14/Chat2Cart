@@ -108,3 +108,15 @@ def test_an_unreadable_write_answer_says_the_cart_may_have_changed() -> None:
 
     with pytest.raises(SwiggyError, match="Read the cart to see the result"):
         asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    ("sent", "expected"),
+    [("0", Decimal("0")), ("93.5", Decimal("93.5")), ("₹1,093.50", Decimal("1093.50"))],
+)
+def test_the_bill_total_is_read_from_the_text_swiggy_sends(sent: str, expected: Decimal) -> None:
+    transport = FakeSwiggyTransport({"items": [], "cartTotalAmount": sent})
+
+    cart = asyncio.run(read_cart(logged_in_client(transport)))
+
+    assert cart.bill_total == expected
