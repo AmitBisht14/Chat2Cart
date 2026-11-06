@@ -1,0 +1,2 @@
+# The image copies nothing from the repository (compose bind-mounts it), so keep the build context empty.
+*

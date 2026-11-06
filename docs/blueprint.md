@@ -20,6 +20,7 @@ Repository: AmitBisht14/Chat2Cart (default branch `main`).
   Makefile                      targets: install, lint, typecheck, test, check (= lint+typecheck+test, both parts)
   .env.example                  placeholders only
   .gitignore
+  Dockerfile  compose.yaml  .dockerignore   toolchain-only image; `docker compose run --rm check|shell`
   .github/workflows/ci.yml      runs `make check` on pull_request and push to main
   ecosystem.config.cjs          pm2: apps "chat2cart-listener" and "chat2cart-agent"
   rulebook.example.md           example rule book

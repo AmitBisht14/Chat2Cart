@@ -14,4 +14,6 @@
   They share only the SQLite database. Full layout: `docs/blueprint.md`.
 - `make install` installs both parts; `make lint`, `make typecheck`, `make test` run both; `make check` runs all three.
 - Listener: `npm ci`, `npm run build|lint|typecheck|test`. Agent: `uv sync`, `uv run pytest|ruff check|mypy`.
+- Docker, no local installs: `docker compose run --rm check` (install + `make check`), `docker compose run --rm shell`.
+  The image holds only the toolchain; the repo is bind-mounted. `chat2cart login swiggy` and the Keychain do not work inside it.
 - Tests never touch the network, the Keychain, WhatsApp or Swiggy.
