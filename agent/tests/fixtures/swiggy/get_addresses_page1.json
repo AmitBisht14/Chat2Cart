@@ -1,0 +1,57 @@
+{
+  "success": true,
+  "data": {
+    "addresses": [
+      {
+        "addressId": "addr-001",
+        "annotation": "Work",
+        "address": "1 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-002",
+        "annotation": "Parents",
+        "address": "2 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-003",
+        "annotation": "Home",
+        "address": "3 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-004",
+        "annotation": "Work",
+        "address": "4 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-005",
+        "annotation": "Parents",
+        "address": "5 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-006",
+        "annotation": "Home",
+        "address": "6 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-007",
+        "annotation": "Work",
+        "address": "7 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-008",
+        "annotation": "Parents",
+        "address": "8 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-009",
+        "annotation": "Home",
+        "address": "9 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-010",
+        "annotation": "Work",
+        "address": "10 Example Street, Bengaluru"
+      }
+    ]
+  }
+}

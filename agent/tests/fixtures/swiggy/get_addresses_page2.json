@@ -1,0 +1,22 @@
+{
+  "success": true,
+  "data": {
+    "addresses": [
+      {
+        "addressId": "addr-011",
+        "annotation": "Parents",
+        "address": "11 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-012",
+        "annotation": "Home",
+        "address": "12 Example Street, Bengaluru"
+      },
+      {
+        "addressId": "addr-013",
+        "annotation": "Work",
+        "address": "13 Example Street, Bengaluru"
+      }
+    ]
+  }
+}
