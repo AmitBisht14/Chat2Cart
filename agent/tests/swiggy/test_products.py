@@ -25,7 +25,7 @@ def test_variant_ids_are_kept_exactly_as_returned() -> None:
     first = products[0].variants[0]
     assert (first.spin_id, first.sku_id) == ("0A1B2C3D", "000123456")
     assert first.pack_size == "500 ml"
-    assert products[1].variants[0].price == 35.5
+    assert products[1].variants[0].price == 36
 
 
 def test_out_of_stock_variants_are_kept_and_marked() -> None:
@@ -52,7 +52,7 @@ def test_a_domain_failure_is_raised_after_one_call() -> None:
     "payload",
     [
         {"items": []},
-        {"products": [{"name": "Milk", "brand": "B", "variants": [{"spinId": 123}]}]},
+        {"products": [{"displayName": "Milk", "brand": "B", "variations": [{"spinId": 123}]}]},
     ],
 )
 def test_an_unexpected_shape_is_an_error_not_an_empty_result(payload: dict[str, object]) -> None:

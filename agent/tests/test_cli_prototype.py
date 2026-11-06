@@ -9,7 +9,7 @@ from chat2cart.cli import app
 ADDRESS_ID = "addr-002"
 SEARCH = load_swiggy_fixture("search_products_milk")
 CART = load_swiggy_fixture("get_cart_two_items")
-UPDATED_CART = {**CART, "billTotal": 120.5}
+UPDATED_CART = {**CART, "cartTotalAmount": "120.5"}
 WRITE_OK = load_swiggy_fixture("update_cart_ok")
 
 # Menu order from the search fixture: 1 Toned 500 ml, 2 Toned 1 l, 3 Toned 2 l (out of stock),

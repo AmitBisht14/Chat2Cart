@@ -186,7 +186,12 @@ def add_one(items: list[CartItem], variant: Variant) -> list[CartItem]:
             for item in items
         ]
     new_line = CartItem.model_validate(
-        {"spin_id": variant.spin_id, "sku_id": variant.sku_id, "name": variant.name, "quantity": 1}
+        {
+            "spin_id": variant.spin_id,
+            "sku_id": variant.sku_id,
+            "itemName": variant.name,
+            "quantity": 1,
+        }
     )
     return [*items, new_line]
 

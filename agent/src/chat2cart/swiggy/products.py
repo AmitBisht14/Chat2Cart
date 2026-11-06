@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AliasPath, BaseModel, ConfigDict, Field, ValidationError
 
 from chat2cart.swiggy.client import SwiggyClient
 from chat2cart.swiggy.errors import SwiggyError
@@ -13,17 +13,19 @@ class Variant(BaseModel):
 
     spin_id: str = Field(alias="spinId")
     sku_id: str = Field(alias="skuId")
-    name: str
-    brand: str
-    pack_size: str = Field(alias="packSize")
-    price: Decimal
-    in_stock: bool = Field(alias="inStock")
+    name: str = Field(alias="displayName")
+    brand: str = Field(alias="brandName")
+    pack_size: str = Field(alias="quantityDescription")
+    price: Decimal = Field(validation_alias=AliasPath("price", "offerPrice"))
+    in_stock: bool = Field(alias="isInStockAndAvailable")
 
 
 class Product(BaseModel):
-    name: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    name: str = Field(alias="displayName")
     brand: str
-    variants: list[Variant]
+    variants: list[Variant] = Field(alias="variations")
 
 
 class _SearchResult(BaseModel):

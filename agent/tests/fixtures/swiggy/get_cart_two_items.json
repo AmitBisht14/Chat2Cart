@@ -3,15 +3,16 @@
     {
       "spinId": "0A1B2C3D",
       "skuId": "000123456",
-      "name": "Example Dairy Toned Milk 500 ml",
+      "itemName": "Example Dairy Toned Milk 500 ml",
       "quantity": 2
     },
     {
       "spinId": "0B2C3D4E",
       "skuId": "000987654",
-      "name": "Sample Farms Full Cream Milk 500 ml",
+      "itemName": "Sample Farms Full Cream Milk 500 ml",
       "quantity": 1
     }
   ],
-  "billTotal": 93.5
+  "cartTotalAmount": "93.5",
+  "cartAbsent": false
 }
