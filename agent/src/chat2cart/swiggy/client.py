@@ -16,9 +16,11 @@ from tenacity import (
     wait_exponential_jitter,
 )
 
+from chat2cart.swiggy.allowlist import ALLOWED_TOOLS
 from chat2cart.swiggy.errors import (
     AuthError,
     BadInputError,
+    BlockedToolError,
     DomainError,
     SwiggyError,
     UpstreamError,
@@ -53,6 +55,7 @@ class SwiggyClient:
     async def call_tool(
         self, name: str, arguments: dict[str, object] | None = None
     ) -> dict[str, object]:
+        require_allowed_tool(name)
         call_arguments = arguments or {}
         log = structlog.get_logger()
         log.info("swiggy_call", tool=name, argument_keys=sorted(call_arguments))
@@ -78,6 +81,14 @@ class SwiggyClient:
             reraise=True,
         )
         return await retrying(self._transport, token, name, arguments)
+
+
+def require_allowed_tool(name: str) -> None:
+    """Reject any tool outside ALLOWED_TOOLS before a token is read or a request is made."""
+    if name in ALLOWED_TOOLS:
+        return
+    structlog.get_logger().warning("security_blocked_tool", tool=name)
+    raise BlockedToolError(f"Swiggy tool '{name}' is not allowed.")
 
 
 def raise_if_domain_failure(payload: dict[str, object]) -> None:
@@ -128,6 +139,7 @@ class McpTransport:
     async def __call__(
         self, token: str, name: str, arguments: dict[str, object]
     ) -> dict[str, object]:
+        require_allowed_tool(name)
         failures = _HttpFailures()
         try:
             # No SDK read timeout on purpose: its own timeout would use -32001, which Swiggy
