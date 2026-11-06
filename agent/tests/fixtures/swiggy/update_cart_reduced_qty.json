@@ -1,0 +1,13 @@
+{
+  "billTotal": 150.5,
+  "removedOutOfStockItems": [],
+  "reducedQuantityItems": [
+    {
+      "spinId": "0B2C3D4E",
+      "skuId": "000987654",
+      "name": "Sample Farms Full Cream Milk 500 ml",
+      "quantity": 3,
+      "requestedQuantity": 5
+    }
+  ]
+}
