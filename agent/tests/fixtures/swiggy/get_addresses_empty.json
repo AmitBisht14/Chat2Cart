@@ -1,6 +1,11 @@
 {
-  "success": true,
-  "data": {
-    "addresses": []
+  "addresses": [],
+  "total": 0,
+  "pagination": {
+    "page": 1,
+    "pageSize": 10,
+    "total": 0,
+    "totalPages": 0,
+    "hasMore": false
   }
 }

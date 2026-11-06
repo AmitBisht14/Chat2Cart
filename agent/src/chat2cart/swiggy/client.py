@@ -207,6 +207,9 @@ def classify_failure(error: MCPError, http_failure: HttpFailure | None) -> Swigg
 def parse_tool_result(result: object) -> dict[str, object]:
     if not isinstance(result, types.CallToolResult):
         raise SwiggyError("Swiggy returned an unexpected kind of result.")
+    # Swiggy's text content is a human-readable summary; the data is in structured content.
+    if result.structured_content is not None:
+        return dict(result.structured_content)
     texts = [item.text for item in result.content if isinstance(item, types.TextContent)]
     try:
         payload = json.loads(texts[0]) if texts else None

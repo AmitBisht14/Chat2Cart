@@ -1,22 +1,33 @@
 {
-  "success": true,
-  "data": {
-    "addresses": [
-      {
-        "addressId": "addr-011",
-        "annotation": "Parents",
-        "address": "11 Example Street, Bengaluru"
-      },
-      {
-        "addressId": "addr-012",
-        "annotation": "Home",
-        "address": "12 Example Street, Bengaluru"
-      },
-      {
-        "addressId": "addr-013",
-        "annotation": "Work",
-        "address": "13 Example Street, Bengaluru"
-      }
-    ]
+  "addresses": [
+    {
+      "id": "addr-011",
+      "addressLine": "11 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Parents"
+    },
+    {
+      "id": "addr-012",
+      "addressLine": "12 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Home"
+    },
+    {
+      "id": "addr-013",
+      "addressLine": "13 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Work"
+    }
+  ],
+  "total": 13,
+  "pagination": {
+    "page": 2,
+    "pageSize": 10,
+    "total": 13,
+    "totalPages": 2,
+    "hasMore": false
   }
 }

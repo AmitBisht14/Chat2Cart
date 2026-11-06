@@ -27,27 +27,26 @@ def test_a_server_that_ignores_the_page_number_does_not_loop_forever() -> None:
 
 def test_a_page_that_says_there_is_no_next_page_stops_the_listing() -> None:
     full_page = load_swiggy_fixture("get_addresses_page1")
-    data = full_page["data"]
-    assert isinstance(data, dict)
-    transport = FakeSwiggyTransport({**full_page, "data": {**data, "hasNextPage": False}})
+    transport = FakeSwiggyTransport({**full_page, "pagination": {"hasMore": False}})
 
     asyncio.run(list_addresses(client_for(transport)))
 
     assert len(transport.calls) == 1
 
 
-def test_description_shows_every_text_field_except_the_id() -> None:
+def test_description_shows_the_label_and_street_but_not_the_phone_number() -> None:
     page = parse_page(load_swiggy_fixture("get_addresses_page2"))
 
     assert page.addresses[0] == Address("addr-011", "Parents | 11 Example Street, Bengaluru")
+    assert "9999999999" not in page.addresses[0].description
 
 
 @pytest.mark.parametrize(
     "payload",
     [
         {"success": True},
-        {"data": {"addresses": "none"}},
-        {"data": {"addresses": [{"annotation": "Home"}]}},
+        {"addresses": "none"},
+        {"addresses": [{"addressTag": "Home"}]},
     ],
 )
 def test_an_unexpected_shape_is_an_error(payload: dict[str, object]) -> None:
