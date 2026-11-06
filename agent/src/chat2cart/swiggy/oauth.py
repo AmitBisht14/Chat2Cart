@@ -50,13 +50,17 @@ class TokenResponse(BaseModel):
     expires_in: int
 
 
+def utc_now() -> datetime:
+    return datetime.now(UTC)
+
+
 def login(
     store: SecretStore,
     http: httpx.Client,
     *,
     open_browser: Callable[[str], object],
     callback_port: int = CALLBACK_PORT,
-    now: Callable[[], datetime] = lambda: datetime.now(UTC),
+    now: Callable[[], datetime] = utc_now,
 ) -> None:
     """Log in to Swiggy with OAuth 2.1 + PKCE and save the tokens in the secret store."""
     client_id = register_client(store, http)
@@ -82,7 +86,7 @@ def challenge_for(verifier: str) -> str:
 def register_client(store: SecretStore, http: httpx.Client) -> str:
     stored = store.get(SWIGGY_CLIENT)
     if stored is not None:
-        return _parse(ClientRegistration, stored).client_id
+        return parse_json(ClientRegistration, stored).client_id
     response = _post(
         http,
         REGISTER_URL,
@@ -95,7 +99,7 @@ def register_client(store: SecretStore, http: httpx.Client) -> str:
             "response_types": ["code"],
         },
     )
-    registration = _parse(ClientRegistration, response.text)
+    registration = parse_json(ClientRegistration, response.text)
     store.set(SWIGGY_CLIENT, registration.model_dump_json())
     return registration.client_id
 
@@ -157,22 +161,24 @@ def exchange_code(http: httpx.Client, client_id: str, code: str, verifier: str) 
             "client_id": client_id,
         },
     )
-    return _parse(TokenResponse, response.text)
+    return parse_json(TokenResponse, response.text)
 
 
 def save_tokens(store: SecretStore, tokens: TokenResponse, now: datetime) -> None:
-    expires_at = (now + timedelta(seconds=tokens.expires_in)).isoformat()
-    store.set(
-        SWIGGY_TOKENS,
-        json.dumps(
-            {
-                "access_token": tokens.access_token,
-                "refresh_token": tokens.refresh_token,
-                "expires_at": expires_at,
-            }
-        ),
+    stored = token_json(tokens, now)
+    store.set(SWIGGY_TOKENS, stored)
+    structlog.get_logger().info("oauth_tokens_saved", expires_at=json.loads(stored)["expires_at"])
+
+
+def token_json(tokens: TokenResponse, now: datetime) -> str:
+    """The JSON kept under swiggy.tokens: both tokens and the absolute expiry time."""
+    return json.dumps(
+        {
+            "access_token": tokens.access_token,
+            "refresh_token": tokens.refresh_token,
+            "expires_at": (now + timedelta(seconds=tokens.expires_in)).isoformat(),
+        }
     )
-    structlog.get_logger().info("oauth_tokens_saved", expires_at=expires_at)
 
 
 def _callback_handler(received: dict[str, str]) -> type[BaseHTTPRequestHandler]:
@@ -208,7 +214,7 @@ def _post(
     return response
 
 
-def _parse[ModelT: BaseModel](model: type[ModelT], text: str) -> ModelT:
+def parse_json[ModelT: BaseModel](model: type[ModelT], text: str) -> ModelT:
     try:
         return model.model_validate_json(text)
     except ValidationError:
