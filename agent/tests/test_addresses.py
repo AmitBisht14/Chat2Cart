@@ -1,25 +1,16 @@
 import asyncio
 
 import pytest
-from fakes.swiggy import FakeSwiggyTransport, RecordingSleep, load_swiggy_fixture
-from fakes.tokens import FakeTokenEndpoint, manager_for, stored_tokens
+from fakes.swiggy import FakeSwiggyTransport, load_swiggy_fixture, logged_in_client
 
-from chat2cart.secrets import InMemorySecretStore
 from chat2cart.swiggy.addresses import Address, list_addresses, parse_page
-from chat2cart.swiggy.client import SwiggyClient
 from chat2cart.swiggy.errors import SwiggyError
-
-
-def client_for(transport: FakeSwiggyTransport) -> SwiggyClient:
-    store = InMemorySecretStore()
-    stored_tokens(store, seconds_left=3600)
-    return SwiggyClient(manager_for(store, FakeTokenEndpoint()), transport, RecordingSleep())
 
 
 def test_a_server_that_ignores_the_page_number_does_not_loop_forever() -> None:
     transport = FakeSwiggyTransport(load_swiggy_fixture("get_addresses_page1"))
 
-    addresses = asyncio.run(list_addresses(client_for(transport)))
+    addresses = asyncio.run(list_addresses(logged_in_client(transport)))
 
     assert len(addresses) == 10
     assert len(transport.calls) == 2
@@ -29,7 +20,7 @@ def test_a_page_that_says_there_is_no_next_page_stops_the_listing() -> None:
     full_page = load_swiggy_fixture("get_addresses_page1")
     transport = FakeSwiggyTransport({**full_page, "pagination": {"hasMore": False}})
 
-    asyncio.run(list_addresses(client_for(transport)))
+    asyncio.run(list_addresses(logged_in_client(transport)))
 
     assert len(transport.calls) == 1
 

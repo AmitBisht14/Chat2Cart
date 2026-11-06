@@ -1,0 +1,67 @@
+{
+  "products": [
+    {
+      "name": "Toned Milk",
+      "brand": "Example Dairy",
+      "variants": [
+        {
+          "spinId": "0A1B2C3D",
+          "skuId": "000123456",
+          "name": "Example Dairy Toned Milk",
+          "brand": "Example Dairy",
+          "packSize": "500 ml",
+          "price": 29,
+          "inStock": true
+        },
+        {
+          "spinId": "0A1B2C3E",
+          "skuId": "000123457",
+          "name": "Example Dairy Toned Milk",
+          "brand": "Example Dairy",
+          "packSize": "1 l",
+          "price": 56,
+          "inStock": true
+        },
+        {
+          "spinId": "0A1B2C3F",
+          "skuId": "000123458",
+          "name": "Example Dairy Toned Milk",
+          "brand": "Example Dairy",
+          "packSize": "2 l",
+          "price": 108,
+          "inStock": false
+        }
+      ]
+    },
+    {
+      "name": "Full Cream Milk",
+      "brand": "Sample Farms",
+      "variants": [
+        {
+          "spinId": "0B2C3D4E",
+          "skuId": "000987654",
+          "name": "Sample Farms Full Cream Milk",
+          "brand": "Sample Farms",
+          "packSize": "500 ml",
+          "price": 35.5,
+          "inStock": true
+        }
+      ]
+    },
+    {
+      "name": "Slim Milk",
+      "brand": "Sample Farms",
+      "variants": [
+        {
+          "spinId": "0C3D4E5F",
+          "skuId": "000555001",
+          "name": "Sample Farms Slim Milk",
+          "brand": "Sample Farms",
+          "packSize": "1 l",
+          "price": 62,
+          "inStock": true
+        }
+      ]
+    }
+  ]
+}

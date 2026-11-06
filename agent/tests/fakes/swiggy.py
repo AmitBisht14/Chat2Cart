@@ -2,6 +2,10 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from chat2cart.secrets import InMemorySecretStore
+from chat2cart.swiggy.client import SwiggyClient
+from fakes.tokens import FakeTokenEndpoint, manager_for, stored_tokens
+
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "swiggy"
 
 
@@ -44,3 +48,10 @@ def load_swiggy_fixture(name: str) -> dict[str, object]:
     loaded = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
     assert isinstance(loaded, dict)
     return loaded
+
+
+def logged_in_client(transport: FakeSwiggyTransport) -> SwiggyClient:
+    """A SwiggyClient with valid stored tokens, the given fake transport and no real sleeping."""
+    store = InMemorySecretStore()
+    stored_tokens(store, seconds_left=3600)
+    return SwiggyClient(manager_for(store, FakeTokenEndpoint()), transport, RecordingSleep())
