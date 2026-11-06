@@ -9,6 +9,7 @@ from pydantic import BeforeValidator, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_PREFIX = "CHAT2CART_"
+DEFAULT_ADDRESS_ENV = f"{ENV_PREFIX}DEFAULT_ADDRESS_ID"
 ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
 CONFIG_ERROR_EXIT_CODE = 2
 MIN_PHONE_DIGITS = 11
@@ -74,3 +75,25 @@ def format_config_errors(error: ValidationError) -> list[str]:
         f"{ENV_PREFIX}{'.'.join(str(part) for part in detail['loc']).upper()}: {detail['msg']}"
         for detail in error.errors()
     ]
+
+
+def save_env_value(path: Path, key: str, value: str) -> None:
+    """Set key=value in an env file: replace the existing line or append one. Other lines stay."""
+    lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+    new_line = f"{key}={_env_text(value)}"
+    if any(_env_key(line) == key for line in lines):
+        lines = [new_line if _env_key(line) == key else line for line in lines]
+    else:
+        lines.append(new_line)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _env_key(line: str) -> str:
+    return line.split("=", 1)[0].strip()
+
+
+def _env_text(value: str) -> str:
+    if re.fullmatch(r"[\w.:@/+-]+", value):
+        return value
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'

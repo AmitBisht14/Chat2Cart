@@ -1,0 +1,82 @@
+{
+  "addresses": [
+    {
+      "id": "addr-001",
+      "addressLine": "1 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Work"
+    },
+    {
+      "id": "addr-002",
+      "addressLine": "2 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Parents"
+    },
+    {
+      "id": "addr-003",
+      "addressLine": "3 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Home"
+    },
+    {
+      "id": "addr-004",
+      "addressLine": "4 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Work"
+    },
+    {
+      "id": "addr-005",
+      "addressLine": "5 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Parents"
+    },
+    {
+      "id": "addr-006",
+      "addressLine": "6 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Home"
+    },
+    {
+      "id": "addr-007",
+      "addressLine": "7 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Work"
+    },
+    {
+      "id": "addr-008",
+      "addressLine": "8 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Parents"
+    },
+    {
+      "id": "addr-009",
+      "addressLine": "9 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Home"
+    },
+    {
+      "id": "addr-010",
+      "addressLine": "10 Example Street, Bengaluru",
+      "phoneNumber": "9999999999",
+      "addressCategory": "Other",
+      "addressTag": "Work"
+    }
+  ],
+  "total": 13,
+  "pagination": {
+    "page": 1,
+    "pageSize": 10,
+    "total": 13,
+    "totalPages": 2,
+    "hasMore": true
+  }
+}

@@ -1,4 +1,8 @@
+import json
 from dataclasses import dataclass
+from pathlib import Path
+
+FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "swiggy"
 
 
 @dataclass(frozen=True)
@@ -33,3 +37,10 @@ class RecordingSleep:
 
     async def __call__(self, seconds: float) -> None:
         self.waits.append(seconds)
+
+
+def load_swiggy_fixture(name: str) -> dict[str, object]:
+    """A recorded (or hand-made) Swiggy response from tests/fixtures/swiggy/<name>.json."""
+    loaded = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
+    assert isinstance(loaded, dict)
+    return loaded

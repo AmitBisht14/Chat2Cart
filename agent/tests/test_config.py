@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from chat2cart.config import load_settings
+from chat2cart.config import load_settings, save_env_value
 
 
 def test_valid_env_gives_typed_settings_with_defaults(valid_env: dict[str, str]) -> None:
@@ -84,3 +84,34 @@ def test_phone_is_normalised_to_digits_with_country_code(
     monkeypatch.setenv("CHAT2CART_SENDER_PHONE", raw)
 
     assert load_settings(env_file=None).sender_phone == "919876543210"
+
+
+def test_save_env_value_replaces_an_existing_line_and_keeps_the_others(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("A=1\nKEY=old\n# note\nB=2\n", encoding="utf-8")
+
+    save_env_value(env_file, "KEY", "new")
+
+    assert env_file.read_text(encoding="utf-8") == "A=1\nKEY=new\n# note\nB=2\n"
+
+
+def test_save_env_value_appends_when_missing_and_creates_the_file(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+
+    save_env_value(env_file, "KEY", "value")
+    save_env_value(env_file, "OTHER", "2")
+
+    assert env_file.read_text(encoding="utf-8") == "KEY=value\nOTHER=2\n"
+
+
+def test_save_env_value_quotes_awkward_values_so_they_load_back_unchanged(tmp_path: Path) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text(
+        "CHAT2CART_SENDER_PHONE=919876543210\nCHAT2CART_RULEBOOK_PATH=r.md\n"
+        "CHAT2CART_DATA_DIR=d\nCHAT2CART_DB_PATH=d/db\n",
+        encoding="utf-8",
+    )
+
+    save_env_value(env_file, "CHAT2CART_DEFAULT_ADDRESS_ID", 'home "flat" #4')
+
+    assert load_settings(env_file=env_file).default_address_id == 'home "flat" #4'

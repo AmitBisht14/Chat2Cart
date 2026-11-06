@@ -3,11 +3,18 @@ import asyncio
 import pytest
 from fakes.swiggy import FakeSwiggyTransport, RecordingSleep
 from fakes.tokens import FakeTokenEndpoint, manager_for, stored_tokens
+from mcp import types
 from structlog.testing import capture_logs
 
 from chat2cart.secrets import InMemorySecretStore
-from chat2cart.swiggy.client import MAX_ATTEMPTS, SwiggyClient
-from chat2cart.swiggy.errors import AuthError, BadInputError, DomainError, UpstreamError
+from chat2cart.swiggy.client import MAX_ATTEMPTS, SwiggyClient, parse_tool_result
+from chat2cart.swiggy.errors import (
+    AuthError,
+    BadInputError,
+    DomainError,
+    SwiggyError,
+    UpstreamError,
+)
 
 OK = {"success": True, "items": []}
 
@@ -104,3 +111,27 @@ def test_logs_name_the_tool_and_argument_keys_but_never_tokens_or_values() -> No
     assert "access-1" not in written
     assert "access-2" not in written
     assert "organic milk" not in written
+
+
+def test_structured_content_is_used_when_the_text_is_a_plain_summary() -> None:
+    result = types.CallToolResult(
+        content=[types.TextContent(type="text", text="Found 2 saved addresses.")],
+        structured_content={"addresses": [{"id": "a1"}]},
+    )
+
+    assert parse_tool_result(result) == {"addresses": [{"id": "a1"}]}
+
+
+def test_json_text_is_used_when_there_is_no_structured_content() -> None:
+    result = types.CallToolResult(
+        content=[types.TextContent(type="text", text='{"success": true}')]
+    )
+
+    assert parse_tool_result(result) == {"success": True}
+
+
+def test_plain_text_without_structured_content_is_an_error() -> None:
+    result = types.CallToolResult(content=[types.TextContent(type="text", text="no data")])
+
+    with pytest.raises(SwiggyError):
+        parse_tool_result(result)
