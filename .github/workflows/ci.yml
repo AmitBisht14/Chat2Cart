@@ -20,3 +20,9 @@ jobs:
         working-directory: agent
       - run: make install
       - run: make check
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose run --rm check
