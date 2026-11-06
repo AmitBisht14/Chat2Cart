@@ -5,6 +5,8 @@ from keyring.errors import KeyringError
 
 KEYCHAIN_SERVICE = "chat2cart"
 LLM_API_KEY = "llm.api_key"
+SWIGGY_CLIENT = "swiggy.client"
+SWIGGY_TOKENS = "swiggy.tokens"
 
 
 class SecretStoreError(Exception):

@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Turns WhatsApp messages into a ready Swiggy Instamart cart."
 requires-python = ">=3.12"
 dependencies = [
+    "httpx>=0.28.1",
     "keyring>=25.7.0",
     "pydantic-settings>=2.16.2",
     "structlog>=26.1.0",
