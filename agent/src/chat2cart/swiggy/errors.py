@@ -37,3 +37,7 @@ class DomainError(SwiggyError):
         self.code = code
         self.message = message
         self.payload = payload
+
+
+class BlockedToolError(SwiggyError):
+    """A Swiggy tool outside the allowlist was requested. Nothing was sent."""

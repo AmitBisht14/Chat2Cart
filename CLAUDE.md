@@ -7,6 +7,8 @@
   implementation plan and acceptance criteria strictly, before any code change.
 - Swiggy: every Swiggy call goes through `SwiggyClient` (`agent/src/chat2cart/swiggy/client.py`).
   Swiggy tools are never bound to the LLM; code decides which tool to call.
+- Protected file: `agent/src/chat2cart/swiggy/allowlist.py` (the only Swiggy tools the code may call).
+  Changes need human review; the story runner (P02) does not auto-merge them.
 - Strict rule: never place an order. Checkout, payment and order-confirmation tools must never be called.
 - Git: author and commit as `Amit Bisht <bishtamith@gmail.com>` (set `git config user.name/user.email` first).
   No Claude author, `Co-Authored-By` or session trailers in commit messages or PR descriptions.
