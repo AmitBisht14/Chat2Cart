@@ -1,9 +1,8 @@
 import asyncio
-from collections.abc import Awaitable, Callable
 
 import pytest
+from fakes.stub_model import StubModel, answering
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from langchain_core.runnables import Runnable, RunnableLambda
 from pydantic import BaseModel
 
 from chat2cart.config import load_settings
@@ -18,25 +17,6 @@ from chat2cart.secrets import LLM_API_KEY, InMemorySecretStore
 
 class Answer(BaseModel):
     label: str
-
-
-class StubModel:
-    """Stands in for a LangChain chat model: with_structured_output gives a runnable."""
-
-    def __init__(self, respond: Callable[[list[BaseMessage]], Awaitable[object]]) -> None:
-        self._respond = respond
-
-    def with_structured_output(
-        self, schema: type[BaseModel]
-    ) -> Runnable[list[BaseMessage], object]:
-        return RunnableLambda(self._respond)
-
-
-def answering(result: object) -> StubModel:
-    async def respond(_messages: list[BaseMessage]) -> object:
-        return result
-
-    return StubModel(respond)
 
 
 def test_a_valid_result_is_returned_as_the_schema_instance() -> None:

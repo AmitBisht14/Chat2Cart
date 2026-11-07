@@ -8,7 +8,13 @@ import pytest
 import structlog
 from keyring.backends import fail
 
+from chat2cart.config import load_settings
+from chat2cart.llm.adapter import LLMAdapter
 from chat2cart.logging import LOGGER_NAME
+from chat2cart.secrets import KeychainSecretStore
+
+# Captured at import, before block_real_keychain swaps in a keyring that always fails.
+REAL_KEYRING = keyring.get_keyring()
 
 VALID_ENV = {
     "CHAT2CART_SENDER_PHONE": "919876543210",
@@ -53,3 +59,10 @@ def reset_logging() -> Iterator[None]:
     for handler in list(logger.handlers):
         logger.removeHandler(handler)
         handler.close()
+
+
+@pytest.fixture
+def real_llm() -> LLMAdapter:
+    """The real model, for the optional tests that run only with CHAT2CART_LLM_IT=1."""
+    keyring.set_keyring(REAL_KEYRING)
+    return LLMAdapter.from_settings(load_settings(), KeychainSecretStore())
