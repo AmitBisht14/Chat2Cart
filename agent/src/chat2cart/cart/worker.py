@@ -19,6 +19,7 @@ POLL_INTERVAL_SECONDS = 1.0
 ERROR_MAX_LENGTH = 500
 
 JobHandler = Callable[[str, dict[str, object]], None]
+FailureHook = Callable[[sqlite3.Connection, Exception], None]
 
 INSERT_JOB = (
     "INSERT INTO cart_jobs (source, payload_json, status, created_at) VALUES (?, ?, 'pending', ?)"
@@ -51,10 +52,12 @@ def run_next_job(
     conn: sqlite3.Connection,
     handler: JobHandler,
     clock: Callable[[], datetime] = utc_now,
+    on_failure: FailureHook | None = None,
 ) -> bool:
     """Run the oldest pending job. Returns False when nothing is pending.
 
     A failing job is marked failed and this returns normally, so the next job still runs.
+    on_failure, if given, is told about the error (for an alert); it can never break the worker.
     """
     claimed = conn.execute(CLAIM_NEXT, (clock().isoformat(),)).fetchone()
     conn.commit()
@@ -62,10 +65,13 @@ def run_next_job(
         return False
     job_id: int = claimed["id"]
     started = monotonic()
-    error = _run_handler(handler, claimed["source"], claimed["payload_json"])
-    status = "done" if error is None else "failed"
+    failure = _run_handler(handler, claimed["source"], claimed["payload_json"])
+    status = "done" if failure is None else "failed"
+    error = None if failure is None else _error_text(failure)
     conn.execute(FINISH, (status, clock().isoformat(), error, job_id))
     conn.commit()
+    if failure is not None and on_failure is not None:
+        _tell(on_failure, conn, failure)
     structlog.get_logger().info(
         "cart_job_finished", job_id=job_id, status=status, seconds=round(monotonic() - started, 3)
     )
@@ -79,44 +85,59 @@ def reset_running_jobs(conn: sqlite3.Connection) -> None:
 
 
 def start_cart_worker(
-    db_path: Path, handler: JobHandler, poll_interval: float = POLL_INTERVAL_SECONDS
+    db_path: Path,
+    handler: JobHandler,
+    poll_interval: float = POLL_INTERVAL_SECONDS,
+    on_failure: FailureHook | None = None,
 ) -> BackgroundLoop:
     """One background thread that runs cart jobs one after another, oldest first."""
     loop = BackgroundLoop(
-        "cart-worker", lambda stop: _run_worker(db_path, handler, poll_interval, stop)
+        "cart-worker", lambda stop: _run_worker(db_path, handler, poll_interval, on_failure, stop)
     )
     loop.start()
     return loop
 
 
 def _run_worker(
-    db_path: Path, handler: JobHandler, poll_interval: float, stop: threading.Event
+    db_path: Path,
+    handler: JobHandler,
+    poll_interval: float,
+    on_failure: FailureHook | None,
+    stop: threading.Event,
 ) -> None:
     # SQLite connections stay on the thread that made them, so the worker opens its own.
     with closing(connect(db_path)) as conn:
         reset_running_jobs(conn)
         while not stop.is_set():
-            if not _run_one(conn, handler):
+            if not _run_one(conn, handler, on_failure):
                 stop.wait(poll_interval)
 
 
-def _run_one(conn: sqlite3.Connection, handler: JobHandler) -> bool:
+def _run_one(conn: sqlite3.Connection, handler: JobHandler, on_failure: FailureHook | None) -> bool:
     try:
-        return run_next_job(conn, handler)
+        return run_next_job(conn, handler, on_failure=on_failure)
     except sqlite3.Error as error:
         structlog.get_logger().error("cart_worker_db_error", error_type=type(error).__name__)
         return False
 
 
-def _run_handler(handler: JobHandler, source: str, payload_json: str) -> str | None:
-    """Run the handler. Returns None on success, else the error text to store."""
+def _run_handler(handler: JobHandler, source: str, payload_json: str) -> Exception | None:
+    """Run the handler. Returns None on success, else the error that stopped it."""
     try:
         handler(source, PAYLOAD.validate_json(payload_json))
     except Exception as error:
         # A job can fail in any way; it is recorded on the row and the next job still runs.
         structlog.get_logger().error("cart_job_failed", error_type=type(error).__name__)
-        return _error_text(error)
+        return error
     return None
+
+
+def _tell(on_failure: FailureHook, conn: sqlite3.Connection, failure: Exception) -> None:
+    try:
+        on_failure(conn, failure)
+    except Exception as error:
+        # An alert that cannot be sent must not stop the worker.
+        structlog.get_logger().error("failure_hook_failed", error_type=type(error).__name__)
 
 
 def _error_text(error: Exception) -> str:
