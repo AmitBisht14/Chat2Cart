@@ -20,7 +20,11 @@ from chat2cart.logging import configure_logging
 from chat2cart.pipeline.handler import pipeline_job_handler
 from chat2cart.pipeline.state import PipelineDeps
 from chat2cart.scheduling.queueing import MessageHandler, message_handler
-from chat2cart.scheduling.release import build_scheduler, release_queue
+from chat2cart.scheduling.release import (
+    build_scheduler,
+    release_queue,
+    schedule_debounce_release,
+)
 from chat2cart.secrets import KeychainSecretStore
 from chat2cart.swiggy.errors import BadInputError
 from chat2cart.understanding.rulebook import RuleBookError, load_rulebook
@@ -71,11 +75,12 @@ def main() -> Service:
     # A release missed while the app was down or the Mac asleep happens now, if inside the window.
     _release_queue(settings)
     handler = pipeline_job_handler(settings.db_path, lambda: _open_deps(settings))
+    scheduler = build_scheduler(settings, lambda: _release_queue(settings))
     service = Service(
         [
             start_cart_worker(settings.db_path, handler),
-            start_inbox_consumer(settings.db_path, _message_handler(settings)),
-            SchedulerPart(build_scheduler(settings, lambda: _release_queue(settings))),
+            start_inbox_consumer(settings.db_path, _message_handler(settings, scheduler)),
+            SchedulerPart(scheduler),
         ]
     )
     structlog.get_logger().info("agent_started")
@@ -91,8 +96,16 @@ def _release_queue(settings: Settings) -> None:
         release_queue(conn, _now(), settings)
 
 
-def _message_handler(settings: Settings) -> MessageHandler:
-    return message_handler(settings, lambda: _language_model(settings))
+def _message_handler(settings: Settings, scheduler: BackgroundScheduler) -> MessageHandler:
+    def schedule_release(run_at: datetime) -> None:
+        schedule_debounce_release(scheduler, run_at, lambda: _release_queue(settings))
+
+    return message_handler(
+        settings,
+        lambda: _language_model(settings),
+        debounce_minutes=settings.daytime_debounce_minutes,
+        schedule_release=schedule_release,
+    )
 
 
 def _language_model(settings: Settings) -> LLMAdapter:

@@ -7,10 +7,12 @@ from zoneinfo import ZoneInfo
 import structlog
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.date import DateTrigger
 
 from chat2cart.scheduling.window import OrderingWindow, is_within_window
 
 RELEASE_JOB_ID = "release-queue"
+DEBOUNCE_JOB_ID = "debounce"
 RELEASE_QUEUED = """
     UPDATE request_queue SET status = 'released', released_at = ?
     WHERE status = 'queued' RETURNING id, inbound_id, items_json, queued_at"""
@@ -79,6 +81,26 @@ def build_scheduler(window: OrderingWindow, release: Callable[[], object]) -> Ba
         misfire_grace_time=None,
     )
     return scheduler
+
+
+def schedule_debounce_release(
+    scheduler: BackgroundScheduler, run_at: datetime, release: Callable[[], object]
+) -> None:
+    """Release the queue once at run_at, unless a daytime group is already waiting.
+
+    The first message of a group sets the time. Later messages join the open group because the
+    job already exists; they do not push the time back. A run after the window closes releases
+    nothing (release_queue checks the window), and the 07:00 release takes the group instead.
+    """
+    if scheduler.get_job(DEBOUNCE_JOB_ID) is not None:
+        return
+    scheduler.add_job(
+        release,
+        DateTrigger(run_date=run_at),
+        id=DEBOUNCE_JOB_ID,
+        coalesce=True,
+        misfire_grace_time=None,
+    )
 
 
 def _insert_batch_job(
