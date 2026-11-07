@@ -1,0 +1,122 @@
+[
+  {
+    "text": "2 litres toned milk and a dozen eggs",
+    "expected": "order",
+    "order_part": null
+  },
+  {
+    "text": "bhaiya 2 doodh bhej do",
+    "expected": "order",
+    "order_part": null
+  },
+  {
+    "text": "Need bread, butter and 1kg onions",
+    "expected": "order",
+    "order_part": null
+  },
+  {
+    "text": "aloo 2 kg aur pyaaz 1 kg chahiye",
+    "expected": "order",
+    "order_part": null
+  },
+  {
+    "text": "please add paneer 200g",
+    "expected": "order",
+    "order_part": null
+  },
+  {
+    "text": "ghar ke liye atta 5 kg bhejna",
+    "expected": "order",
+    "order_part": null
+  },
+  {
+    "text": "tomatoes 1 kg, coriander, and green chillies",
+    "expected": "order",
+    "order_part": null
+  },
+  {
+    "text": "ek packet maggi aur do chai patti",
+    "expected": "order",
+    "order_part": null
+  },
+  {
+    "text": "good morning!",
+    "expected": "general",
+    "order_part": null
+  },
+  {
+    "text": "kal shaam ko ghar aa raha hoon",
+    "expected": "general",
+    "order_part": null
+  },
+  {
+    "text": "Did you see the match last night?",
+    "expected": "general",
+    "order_part": null
+  },
+  {
+    "text": "thik hai, thanks",
+    "expected": "general",
+    "order_part": null
+  },
+  {
+    "text": "Call me when you reach",
+    "expected": "general",
+    "order_part": null
+  },
+  {
+    "text": "mummy ko bol dena main late aaunga",
+    "expected": "general",
+    "order_part": null
+  },
+  {
+    "text": "Happy birthday!!",
+    "expected": "general",
+    "order_part": null
+  },
+  {
+    "text": "Good morning! Please send 2 packets of milk and ask mom to call me",
+    "expected": "mixed",
+    "order_part": "send 2 packets of milk"
+  },
+  {
+    "text": "kal party hai, 1 kg chicken aur cold drink bhej dena, aur haan time pe aana",
+    "expected": "mixed",
+    "order_part": "1 kg chicken aur cold drink bhej dena"
+  },
+  {
+    "text": "Thanks for yesterday. Also need 6 eggs",
+    "expected": "mixed",
+    "order_part": "need 6 eggs"
+  },
+  {
+    "text": "bhaiya sabzi ke liye 1 kg bhindi bhej do, aur weekend pe movie chalein?",
+    "expected": "mixed",
+    "order_part": "1 kg bhindi bhej do"
+  },
+  {
+    "text": "same as last time",
+    "expected": "unsure",
+    "order_part": null
+  },
+  {
+    "text": "wahi wala bhej dena",
+    "expected": "unsure",
+    "order_part": null
+  },
+  {
+    "text": "send the usual",
+    "expected": "unsure",
+    "order_part": null
+  },
+  {
+    "text": "milk?",
+    "expected": "unsure",
+    "order_part": null
+  },
+  {
+    "text": "kuch khane ko mangwa lo",
+    "expected": "unsure",
+    "order_part": null
+  }
+]
