@@ -51,6 +51,7 @@ class Settings(BaseSettings):
     db_path: Path
     llm_provider: str
     llm_model: str
+    notify_channel: Literal["macos", "log"] = "macos"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     @field_validator("timezone")
