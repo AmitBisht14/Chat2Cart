@@ -2,39 +2,28 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import pino from "pino";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import {
+  STATUS_CONNECTION_LOST,
+  STATUS_LOGGED_OUT,
+  emitClose,
+  fakeBaileys,
+  lastFakeSocket,
+  resetFakeBaileys,
+} from "../fakes/baileys.js";
 import type { FakeSocket } from "../fakes/fakeSocket.js";
 import { startConnection } from "../../src/whatsapp/connection.js";
 
-const baileys = vi.hoisted(() => ({
-  sockets: [] as unknown[],
-  saveCreds: vi.fn(),
-  useMultiFileAuthState: vi.fn(),
-}));
-
 vi.mock("@whiskeysockets/baileys", async () => {
-  const { createFakeSocket } = await import("../fakes/fakeSocket.js");
-  return {
-    default: vi.fn(() => {
-      const socket = createFakeSocket();
-      baileys.sockets.push(socket);
-      return socket;
-    }),
-    DisconnectReason: { loggedOut: 401, connectionLost: 408 },
-    useMultiFileAuthState: baileys.useMultiFileAuthState,
-  };
+  const { createBaileysMock } = await import("../fakes/baileys.js");
+  return createBaileysMock();
 });
 
 const SESSION_DIR = "/tmp/chat2cart-test-session";
-const CONNECTION_LOST = 408;
-const LOGGED_OUT = 401;
 const logger = pino({ level: "silent" });
 
 beforeEach(() => {
   vi.useFakeTimers();
-  baileys.sockets.length = 0;
-  baileys.saveCreds.mockResolvedValue(undefined);
-  baileys.useMultiFileAuthState.mockReset();
-  baileys.useMultiFileAuthState.mockResolvedValue({ state: {}, saveCreds: baileys.saveCreds });
+  resetFakeBaileys();
 });
 
 afterEach(() => {
@@ -48,14 +37,7 @@ function connectionStarted(onMessage = vi.fn()): { stop: () => void; onMessage: 
 
 async function lastSocket(): Promise<FakeSocket> {
   await vi.advanceTimersByTimeAsync(0);
-  return baileys.sockets[baileys.sockets.length - 1] as FakeSocket;
-}
-
-function closeWith(socket: FakeSocket, statusCode: number): void {
-  socket.ev.emit("connection.update", {
-    connection: "close",
-    lastDisconnect: { error: { output: { statusCode } }, date: new Date() },
-  });
+  return lastFakeSocket();
 }
 
 it("pins_baileys_to_an_exact_version", () => {
@@ -75,7 +57,7 @@ it("saves_credentials_whenever_they_update", async () => {
 
   socket.ev.emit("creds.update", {});
 
-  expect(baileys.saveCreds).toHaveBeenCalledTimes(1);
+  expect(fakeBaileys.saveCreds).toHaveBeenCalledTimes(1);
 });
 
 it("passes_a_notify_message_to_the_handler", async () => {
@@ -115,44 +97,44 @@ it("keeps_delivering_when_the_handler_throws", async () => {
 
 it("reconnects_with_the_same_session_folder_after_a_connection_loss", async () => {
   connectionStarted();
-  closeWith(await lastSocket(), CONNECTION_LOST);
+  emitClose(await lastSocket(), STATUS_CONNECTION_LOST);
 
   await vi.advanceTimersByTimeAsync(500);
 
-  expect(baileys.useMultiFileAuthState.mock.calls).toEqual([[SESSION_DIR], [SESSION_DIR]]);
-  expect(baileys.sockets).toHaveLength(2);
+  expect(fakeBaileys.useMultiFileAuthState.mock.calls).toEqual([[SESSION_DIR], [SESSION_DIR]]);
+  expect(fakeBaileys.sockets).toHaveLength(2);
 });
 
 it("doubles_the_reconnect_delay_until_the_connection_opens", async () => {
   connectionStarted();
-  closeWith(await lastSocket(), CONNECTION_LOST);
+  emitClose(await lastSocket(), STATUS_CONNECTION_LOST);
   await vi.advanceTimersByTimeAsync(500);
-  closeWith(await lastSocket(), CONNECTION_LOST);
+  emitClose(await lastSocket(), STATUS_CONNECTION_LOST);
 
   await vi.advanceTimersByTimeAsync(999);
-  expect(baileys.sockets).toHaveLength(2);
+  expect(fakeBaileys.sockets).toHaveLength(2);
   await vi.advanceTimersByTimeAsync(1);
 
-  expect(baileys.sockets).toHaveLength(3);
+  expect(fakeBaileys.sockets).toHaveLength(3);
 });
 
 it("does_not_reconnect_after_a_logout", async () => {
   connectionStarted();
-  closeWith(await lastSocket(), LOGGED_OUT);
+  emitClose(await lastSocket(), STATUS_LOGGED_OUT);
 
   await vi.advanceTimersByTimeAsync(60_000);
 
-  expect(baileys.sockets).toHaveLength(1);
+  expect(fakeBaileys.sockets).toHaveLength(1);
 });
 
 it("stop_ends_the_socket_and_cancels_a_pending_reconnect", async () => {
   const { stop } = connectionStarted();
   const socket = await lastSocket();
-  closeWith(socket, CONNECTION_LOST);
+  emitClose(socket, STATUS_CONNECTION_LOST);
 
   stop();
   await vi.advanceTimersByTimeAsync(60_000);
 
   expect(socket.end).toHaveBeenCalled();
-  expect(baileys.sockets).toHaveLength(1);
+  expect(fakeBaileys.sockets).toHaveLength(1);
 });
