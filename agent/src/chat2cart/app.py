@@ -4,15 +4,18 @@ import uuid
 from collections.abc import Callable
 from contextlib import closing
 from datetime import datetime
+from pathlib import Path
 
 import structlog
+import typer
 from pydantic import BaseModel
 
-from chat2cart.config import load_settings
+from chat2cart.config import CONFIG_ERROR_EXIT_CODE, load_settings
 from chat2cart.db.connection import connect
 from chat2cart.db.migrate import migrate
 from chat2cart.logging import configure_logging
 from chat2cart.swiggy.oauth import utc_now
+from chat2cart.understanding.rulebook import RuleBookError, load_rulebook
 
 POLL_INTERVAL_SECONDS = 1.0
 
@@ -113,6 +116,20 @@ class InboxConsumer:
 def main() -> None:
     settings = load_settings()
     configure_logging(settings)
+    _load_rulebook_or_exit(settings.rulebook_path)
     with closing(connect(settings.db_path)) as conn:
         version = migrate(conn)
     structlog.get_logger().info("database_ready", schema_version=version)
+
+
+def _load_rulebook_or_exit(path: Path) -> None:
+    """Fail fast on a missing or invalid rule book, naming each problem."""
+    try:
+        entries = load_rulebook(path)
+    except RuleBookError as error:
+        for line in error.errors:
+            typer.echo(line, err=True)
+        raise SystemExit(CONFIG_ERROR_EXIT_CODE) from None
+    structlog.get_logger().info(
+        "rulebook_loaded", entries=len({entry.name for entry in entries.values()})
+    )
