@@ -1,4 +1,3 @@
-import sqlite3
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from pathlib import Path
@@ -8,16 +7,17 @@ import structlog
 import typer
 
 from chat2cart.background import BackgroundLoop
-from chat2cart.cart.worker import enqueue_job, start_cart_worker
+from chat2cart.cart.worker import start_cart_worker
 from chat2cart.cli import HTTP_TIMEOUT_SECONDS, build_swiggy_client
 from chat2cart.config import CONFIG_ERROR_EXIT_CODE, Settings, load_settings
 from chat2cart.db.connection import connect
 from chat2cart.db.migrate import migrate
-from chat2cart.inbox import InboxMessage, start_inbox_consumer
+from chat2cart.inbox import start_inbox_consumer
 from chat2cart.llm.adapter import LLMAdapter
 from chat2cart.logging import configure_logging
 from chat2cart.pipeline.handler import pipeline_job_handler
 from chat2cart.pipeline.state import PipelineDeps
+from chat2cart.scheduling.queueing import MessageHandler, message_handler
 from chat2cart.secrets import KeychainSecretStore
 from chat2cart.swiggy.errors import BadInputError
 from chat2cart.understanding.rulebook import RuleBookError, load_rulebook
@@ -49,16 +49,19 @@ def main() -> Service:
     service = Service(
         [
             start_cart_worker(settings.db_path, handler),
-            start_inbox_consumer(settings.db_path, enqueue_message_job),
+            start_inbox_consumer(settings.db_path, _message_handler(settings)),
         ]
     )
     structlog.get_logger().info("agent_started")
     return service
 
 
-def enqueue_message_job(conn: sqlite3.Connection, message: InboxMessage) -> None:
-    """Each accepted message becomes one cart job; the cart worker runs the pipeline."""
-    enqueue_job(conn, "message", {"inbound_ids": [message.id], "text": message.text})
+def _message_handler(settings: Settings) -> MessageHandler:
+    return message_handler(settings, lambda: _language_model(settings))
+
+
+def _language_model(settings: Settings) -> LLMAdapter:
+    return LLMAdapter.from_settings(settings, KeychainSecretStore())
 
 
 @contextmanager
@@ -68,7 +71,7 @@ def _open_deps(settings: Settings) -> Iterator[PipelineDeps]:
         raise BadInputError("No delivery address is chosen. Run chat2cart swiggy address.")
     with httpx.Client(timeout=HTTP_TIMEOUT_SECONDS) as http:
         yield PipelineDeps(
-            llm=LLMAdapter.from_settings(settings, KeychainSecretStore()),
+            llm=_language_model(settings),
             swiggy=build_swiggy_client(http),
             load_rulebook=lambda: load_rulebook(settings.rulebook_path),
             address_id=address_id,

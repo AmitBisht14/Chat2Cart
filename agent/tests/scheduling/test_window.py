@@ -1,23 +1,16 @@
 import os
 import time as host_time
 from collections.abc import Iterator
-from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
+from fakes.window import Window
 
 from chat2cart.config import load_settings
 from chat2cart.scheduling.window import is_within_window
 
 IST = ZoneInfo("Asia/Kolkata")
-
-
-@dataclass(frozen=True)
-class Window:
-    window_start: time = time(7, 0)
-    window_end: time = time(22, 30)
-    timezone: str = "Asia/Kolkata"
 
 
 def ist(hour: int, minute: int, second: int = 0) -> datetime:

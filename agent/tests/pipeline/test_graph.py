@@ -11,7 +11,6 @@ import pytest
 from fakes.fake_llm import FakeLLM
 from fakes.swiggy import FakeSwiggyTransport, load_swiggy_fixture, logged_in_client
 
-from chat2cart.app import enqueue_message_job
 from chat2cart.cart.worker import start_cart_worker
 from chat2cart.config import load_settings
 from chat2cart.db.connection import connect
@@ -21,6 +20,7 @@ from chat2cart.logging import configure_logging
 from chat2cart.pipeline.graph import run_pipeline
 from chat2cart.pipeline.handler import pipeline_job_handler
 from chat2cart.pipeline.state import OrderState, PipelineDeps
+from chat2cart.scheduling.queueing import enqueue_message_job
 from chat2cart.swiggy.errors import BlockedToolError
 from chat2cart.understanding.rulebook import parse_rulebook
 from chat2cart.understanding.schemas import ExtractedItem, Extraction, Intent
