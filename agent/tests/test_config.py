@@ -16,6 +16,7 @@ def test_valid_env_gives_typed_settings_with_defaults(valid_env: dict[str, str])
     assert settings.log_level == "INFO"
     assert settings.default_address_id is None
     assert settings.db_path == Path("data/chat2cart.sqlite")
+    assert (settings.llm_provider, settings.llm_model) == ("anthropic", "test-model")
 
 
 def test_settings_are_read_from_the_env_file(tmp_path: Path) -> None:
@@ -26,6 +27,8 @@ def test_settings_are_read_from_the_env_file(tmp_path: Path) -> None:
         "CHAT2CART_DATA_DIR=data\n"
         "CHAT2CART_DB_PATH=data/db.sqlite\n"
         "CHAT2CART_WA_SESSION_DIR=wa-session\n"
+        "CHAT2CART_LLM_PROVIDER=anthropic\n"
+        "CHAT2CART_LLM_MODEL=test-model\n"
     )
 
     settings = load_settings(env_file=env_file)
@@ -35,7 +38,7 @@ def test_settings_are_read_from_the_env_file(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "missing",
-    ["SENDER_PHONE", "RULEBOOK_PATH", "DATA_DIR", "DB_PATH"],
+    ["SENDER_PHONE", "RULEBOOK_PATH", "DATA_DIR", "DB_PATH", "LLM_PROVIDER", "LLM_MODEL"],
 )
 def test_missing_required_setting_names_the_variable(
     missing: str,
@@ -108,7 +111,8 @@ def test_save_env_value_quotes_awkward_values_so_they_load_back_unchanged(tmp_pa
     env_file = tmp_path / ".env"
     env_file.write_text(
         "CHAT2CART_SENDER_PHONE=919876543210\nCHAT2CART_RULEBOOK_PATH=r.md\n"
-        "CHAT2CART_DATA_DIR=d\nCHAT2CART_DB_PATH=d/db\n",
+        "CHAT2CART_DATA_DIR=d\nCHAT2CART_DB_PATH=d/db\n"
+        "CHAT2CART_LLM_PROVIDER=anthropic\nCHAT2CART_LLM_MODEL=test-model\n",
         encoding="utf-8",
     )
 

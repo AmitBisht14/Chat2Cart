@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     rulebook_path: Path
     data_dir: Path
     db_path: Path
+    llm_provider: str
+    llm_model: str
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     @field_validator("timezone")

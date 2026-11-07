@@ -15,6 +15,8 @@ VALID_ENV = {
     "CHAT2CART_RULEBOOK_PATH": "rulebook.md",
     "CHAT2CART_DATA_DIR": "data",
     "CHAT2CART_DB_PATH": "data/chat2cart.sqlite",
+    "CHAT2CART_LLM_PROVIDER": "anthropic",
+    "CHAT2CART_LLM_MODEL": "test-model",
 }
 
 

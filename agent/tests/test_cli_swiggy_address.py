@@ -12,6 +12,8 @@ ENV_CONTENT = (
     "CHAT2CART_RULEBOOK_PATH=rulebook.md\n"
     "CHAT2CART_DATA_DIR=data\n"
     "CHAT2CART_DB_PATH=data/chat2cart.sqlite\n"
+    "CHAT2CART_LLM_PROVIDER=anthropic\n"
+    "CHAT2CART_LLM_MODEL=test-model\n"
     "CHAT2CART_LOG_LEVEL=DEBUG\n"
 )
 
