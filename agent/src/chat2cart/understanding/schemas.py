@@ -49,3 +49,13 @@ class PreferencedItem(BaseModel):
     brands: list[str]
     size: str | None
     substitute: Substitute
+
+
+class ResolvedItem(BaseModel):
+    """An item matched to exactly one Instamart variant, with the number of packs to add."""
+
+    name: str
+    spin_id: str
+    sku_id: str
+    variant_name: str
+    quantity: int = Field(ge=1)
