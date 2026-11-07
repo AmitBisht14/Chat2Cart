@@ -4,20 +4,15 @@ import os
 from pathlib import Path
 from typing import TypedDict
 
-import keyring
 import pytest
 from fakes.fake_llm import FakeLLM
 
-from chat2cart.config import load_settings
 from chat2cart.llm.adapter import LLMAdapter, LLMTimeoutError
 from chat2cart.llm.prompts import wrap_untrusted
-from chat2cart.secrets import KeychainSecretStore
 from chat2cart.understanding.classify import classify_message
 from chat2cart.understanding.schemas import Intent
 
 SAMPLES_FILE = Path(__file__).parents[1] / "fixtures" / "classify_samples.json"
-# Captured at import, before the autouse fixture swaps in a keyring that always fails.
-REAL_KEYRING = keyring.get_keyring()
 
 
 class Sample(TypedDict):
@@ -98,10 +93,7 @@ def test_a_model_failure_is_not_swallowed() -> None:
     reason="Set CHAT2CART_LLM_IT=1 to run against the real model.",
 )
 @pytest.mark.parametrize("sample", load_samples(), ids=lambda sample: sample["text"][:40])
-def test_the_real_model_agrees_with_every_sample(sample: Sample) -> None:
-    keyring.set_keyring(REAL_KEYRING)
-    adapter = LLMAdapter.from_settings(load_settings(), KeychainSecretStore())
-
-    intent = asyncio.run(classify_message(sample["text"], adapter))
+def test_the_real_model_agrees_with_every_sample(sample: Sample, real_llm: LLMAdapter) -> None:
+    intent = asyncio.run(classify_message(sample["text"], real_llm))
 
     assert intent.label == sample["expected"]
