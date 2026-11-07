@@ -4,6 +4,7 @@ import type { Logger } from "pino";
 import { loadConfig } from "./config.js";
 import type { ListenerConfig } from "./config.js";
 import { DatabaseSchemaError, openDatabase } from "./db.js";
+import { senderFilter } from "./intake/senderFilter.js";
 import { createLogger } from "./logger.js";
 import { startConnection } from "./whatsapp/connection.js";
 import type { Connection } from "./whatsapp/connection.js";
@@ -28,6 +29,7 @@ export function start(): ListenerContext {
     logger,
     db,
     onMessage: (message) => {
+      if (!senderFilter({ db, logger, allowedPn: config.senderPhone }, message).accepted) return;
       logger.info({ messageId: message.key.id }, "message_received");
     },
   });
