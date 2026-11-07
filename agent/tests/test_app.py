@@ -76,7 +76,7 @@ def test_main_releases_a_queue_missed_overnight_when_it_starts_inside_the_window
     with connect(db_path) as reader:
         statuses = [row["status"] for row in reader.execute("SELECT status FROM request_queue")]
         sources = [row["source"] for row in reader.execute("SELECT source FROM cart_jobs")]
-    assert (statuses, sources) == (["released"], ["queue"])
+    assert (statuses, sources) == (["released"], ["overnight_batch"])
 
 
 def test_main_starts_the_release_scheduler(started_env: Path) -> None:

@@ -1,11 +1,11 @@
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from chat2cart.swiggy.cart import CartItem, ReducedItem
 from chat2cart.swiggy.errors import DomainError, SwiggyError
-from chat2cart.understanding.schemas import SkippedItem
+from chat2cart.understanding.schemas import ResolvedItem, SkippedItem
 
 MIN_ORDER_RUPEES = Decimal(99)
 NOT_SERVICEABLE_REASON = "address_not_serviceable"
@@ -23,6 +23,7 @@ class CappedItem(BaseModel):
     reason: Literal["capped"] = "capped"
     requested: int
     applied: int
+    sources: list[str] = Field(default_factory=list)
 
 
 def is_below_minimum(total: Decimal | None) -> bool:
@@ -36,12 +37,27 @@ def is_not_serviceable(error: DomainError) -> bool:
     return "NOT_SERVICEABLE" in code or "not serviceable" in error.message.lower()
 
 
-def out_of_stock_skips(removed: list[CartItem]) -> list[SkippedItem]:
-    return [SkippedItem(name=item.name, reason=OUT_OF_STOCK) for item in removed]
-
-
-def capped_items(reduced: list[ReducedItem]) -> list[CappedItem]:
+def out_of_stock_skips(removed: list[CartItem], resolved: list[ResolvedItem]) -> list[SkippedItem]:
+    sources = _sources_by_variant(resolved)
     return [
-        CappedItem(name=item.name, requested=item.requested_quantity, applied=item.capped_quantity)
+        SkippedItem(name=item.name, reason=OUT_OF_STOCK, sources=sources.get(item.spin_id, []))
+        for item in removed
+    ]
+
+
+def capped_items(reduced: list[ReducedItem], resolved: list[ResolvedItem]) -> list[CappedItem]:
+    sources = _sources_by_variant(resolved)
+    return [
+        CappedItem(
+            name=item.name,
+            requested=item.requested_quantity,
+            applied=item.capped_quantity,
+            sources=sources.get(item.spin_id, []),
+        )
         for item in reduced
     ]
+
+
+def _sources_by_variant(resolved: list[ResolvedItem]) -> dict[str, list[str]]:
+    """Which messages each variant came from, so Swiggy's own answers can be traced back."""
+    return {item.spin_id: item.sources for item in resolved}
