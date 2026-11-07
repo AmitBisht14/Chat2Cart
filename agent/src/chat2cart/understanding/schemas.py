@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 IntentLabel = Literal["order", "general", "mixed", "unsure"]
 Unit = Literal["g", "kg", "ml", "l", "piece", "dozen", "pack"]
+Substitute = Literal["never", "same_brand", "any"]
 
 
 class Intent(BaseModel):
@@ -30,3 +31,21 @@ class Extraction(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     items: list[ExtractedItem]
+
+
+class SkippedItem(BaseModel):
+    """An item left out of the cart, with the reason why. When in doubt, leave it out."""
+
+    name: str
+    reason: str
+
+
+class PreferencedItem(BaseModel):
+    """An extracted item with the rule book's brand, size and substitution rule attached."""
+
+    name: str
+    quantity: Decimal = Field(gt=0)
+    unit: Unit | None
+    brands: list[str]
+    size: str | None
+    substitute: Substitute

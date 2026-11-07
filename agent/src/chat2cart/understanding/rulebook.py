@@ -1,9 +1,10 @@
 import re
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from chat2cart.understanding.schemas import Substitute
 
 SIZE_PATTERN = re.compile(r"\d+(\.\d+)?\s*(g|kg|ml|l|pcs|pack|dozen)", re.IGNORECASE)
 BULLET_PATTERN = re.compile(r"[-*]\s+(.*)")
@@ -37,7 +38,7 @@ class RuleEntry(BaseModel):
     default_quantity: int | None = Field(default=None, ge=1)
     min_quantity: int | None = Field(default=None, ge=1)
     size: str | None = None
-    substitute: Literal["never", "same_brand", "any"] = "never"
+    substitute: Substitute = "never"
 
 
 def normalise_name(name: str) -> str:
