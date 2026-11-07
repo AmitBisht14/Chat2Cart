@@ -1,0 +1,83 @@
+{
+  "nextOffset": "1",
+  "products": [
+    {
+      "displayName": "Aashirvaad Atta",
+      "brand": "Aashirvaad",
+      "inStock": true,
+      "isAvail": true,
+      "variations": [
+        {
+          "spinId": "ATTA-AS-1",
+          "skuId": "SKU-AS-1",
+          "quantityDescription": "1 kg",
+          "displayName": "Aashirvaad Atta",
+          "brandName": "Aashirvaad",
+          "price": {
+            "mrp": 60,
+            "offerPrice": 60,
+            "unitLevelPrice": "x"
+          },
+          "isInStockAndAvailable": true,
+          "maxQuantity": 20
+        },
+        {
+          "spinId": "ATTA-AS-5",
+          "skuId": "SKU-AS-5",
+          "quantityDescription": "5 kg",
+          "displayName": "Aashirvaad Atta",
+          "brandName": "Aashirvaad",
+          "price": {
+            "mrp": 265,
+            "offerPrice": 265,
+            "unitLevelPrice": "x"
+          },
+          "isInStockAndAvailable": true,
+          "maxQuantity": 20
+        }
+      ],
+      "productId": "p",
+      "parentProductId": "pp",
+      "isPromoted": false
+    },
+    {
+      "displayName": "Sample Mills Atta",
+      "brand": "Sample Mills",
+      "inStock": true,
+      "isAvail": true,
+      "variations": [
+        {
+          "spinId": "ATTA-SM-1",
+          "skuId": "SKU-SM-1",
+          "quantityDescription": "1 kg",
+          "displayName": "Sample Mills Atta",
+          "brandName": "Sample Mills",
+          "price": {
+            "mrp": 55,
+            "offerPrice": 55,
+            "unitLevelPrice": "x"
+          },
+          "isInStockAndAvailable": true,
+          "maxQuantity": 20
+        },
+        {
+          "spinId": "ATTA-SM-5",
+          "skuId": "SKU-SM-5",
+          "quantityDescription": "5 kg",
+          "displayName": "Sample Mills Atta",
+          "brandName": "Sample Mills",
+          "price": {
+            "mrp": 250,
+            "offerPrice": 250,
+            "unitLevelPrice": "x"
+          },
+          "isInStockAndAvailable": false,
+          "maxQuantity": 20
+        }
+      ],
+      "productId": "p",
+      "parentProductId": "pp",
+      "isPromoted": false
+    }
+  ]
+}
