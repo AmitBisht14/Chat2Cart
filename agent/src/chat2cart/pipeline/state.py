@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from chat2cart.cart.merge import CartDiff, MergeResult
 from chat2cart.cart.outcomes import CappedItem
 from chat2cart.llm.adapter import StructuredLLM
+from chat2cart.notify.base import Notify
 from chat2cart.swiggy.cart import CartItem
 from chat2cart.swiggy.client import SwiggyClient
 from chat2cart.understanding.rulebook import RuleEntry
@@ -29,6 +30,7 @@ class PipelineDeps:
     swiggy: SwiggyClient
     load_rulebook: Callable[[], dict[str, RuleEntry]]
     address_id: str
+    notify: Notify
 
 
 class PipelinePayload(BaseModel):

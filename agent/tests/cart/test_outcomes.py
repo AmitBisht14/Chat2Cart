@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 from fakes.fake_llm import FakeLLM
+from fakes.notify import RecordingNotify
 from fakes.swiggy import FakeSwiggyTransport, load_swiggy_fixture, logged_in_client
 
 from chat2cart.cart.outcomes import (
@@ -57,6 +58,7 @@ def deps_for(transport: FakeSwiggyTransport) -> PipelineDeps:
         swiggy=logged_in_client(transport),
         load_rulebook=lambda: RULEBOOK,
         address_id=ADDRESS_ID,
+        notify=RecordingNotify(),
     )
 
 

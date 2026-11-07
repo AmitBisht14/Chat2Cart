@@ -1,5 +1,6 @@
 from chat2cart.cart.merge import merge_into_cart
 from chat2cart.cart.outcomes import capped_items, is_below_minimum, out_of_stock_skips
+from chat2cart.notify.summary import compose_summary
 from chat2cart.pipeline.state import OrderState, PipelineDeps, RunReport
 from chat2cart.understanding.classify import classify_message
 from chat2cart.understanding.extract import extract_items
@@ -35,25 +36,27 @@ async def merge_cart(state: OrderState, deps: PipelineDeps) -> OrderState:
     return {"merge_result": result}
 
 
-async def report(state: OrderState, _deps: PipelineDeps) -> OrderState:
+async def report(state: OrderState, deps: PipelineDeps) -> OrderState:
     merge_result = state.get("merge_result")
     intent = state.get("intent")
     resolved = state.get("resolved", [])
     removed = merge_result.removed if merge_result else []
     total = merge_result.bill_total if merge_result else None
     written = merge_result is not None and merge_result.actual is not None
-    return {
-        "report": RunReport(
-            intent=intent.label if intent else None,
-            dry_run=state["dry_run"],
-            added=resolved,
-            skipped=[*state.get("skipped", []), *out_of_stock_skips(removed, resolved)],
-            removed=removed,
-            reduced=capped_items(merge_result.reduced if merge_result else [], resolved),
-            diffs=merge_result.diffs if merge_result else [],
-            total=total,
-            # The total of a dry run is the cart as it is now, so only a written cart is flagged.
-            below_minimum=written and is_below_minimum(total),
-            sources=state["inbound_ids"],
-        )
-    }
+    run_report = RunReport(
+        intent=intent.label if intent else None,
+        dry_run=state["dry_run"],
+        added=resolved,
+        skipped=[*state.get("skipped", []), *out_of_stock_skips(removed, resolved)],
+        removed=removed,
+        reduced=capped_items(merge_result.reduced if merge_result else [], resolved),
+        diffs=merge_result.diffs if merge_result else [],
+        total=total,
+        # The total of a dry run is the cart as it is now, so only a written cart is flagged.
+        below_minimum=written and is_below_minimum(total),
+        sources=state["inbound_ids"],
+    )
+    if written:
+        # notify never raises, so a failed send cannot break the run.
+        deps.notify("summary", "Cart updated", compose_summary(run_report))
+    return {"report": run_report}
