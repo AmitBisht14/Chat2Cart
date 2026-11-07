@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "spinId": "EGG-FF-12",
+      "skuId": "SKU-FF-12",
+      "itemName": "Farm Fresh Eggs 12 pcs"
+    },
+    {
+      "spinId": "ATTA-AS-5",
+      "skuId": "SKU-AS-5",
+      "itemName": "Aashirvaad Atta 5 kg"
+    }
+  ]
+}

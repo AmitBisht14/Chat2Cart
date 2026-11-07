@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from chat2cart.swiggy.client import SwiggyClient
 from chat2cart.swiggy.products import Product, Variant, search
+from chat2cart.understanding.hints import load_hints
 from chat2cart.understanding.packsize import amount_of, pack_count, parse_amount
 from chat2cart.understanding.schemas import PreferencedItem, ResolvedItem, SkippedItem
 
@@ -16,13 +17,15 @@ async def resolve_items(
 ) -> tuple[list[ResolvedItem], list[SkippedItem]]:
     """Match each item to exactly one in-stock variant, or skip it with a reason.
 
-    Search is read-only. When in doubt the item is skipped: the cart never gets a guess.
+    Search is read-only. When in doubt the item is skipped: the cart never gets a guess. The
+    user's go-to items and recent orders are read once and only break ties.
     """
+    hints = await load_hints(client, address_id)
     resolved: list[ResolvedItem] = []
     skipped: list[SkippedItem] = []
     for item in items:
         products = await search(client, item.name, address_id)
-        outcome = choose_variant(item, products)
+        outcome = choose_variant(item, products, hints)
         if isinstance(outcome, ResolvedItem):
             resolved.append(outcome)
         else:
@@ -30,7 +33,9 @@ async def resolve_items(
     return resolved, skipped
 
 
-def choose_variant(item: PreferencedItem, products: list[Product]) -> ResolvedItem | SkippedItem:
+def choose_variant(
+    item: PreferencedItem, products: list[Product], hints: set[str]
+) -> ResolvedItem | SkippedItem:
     variants = _unique_variants(products)
     candidates = _select(item, [variant for variant in variants if variant.in_stock])
     if not candidates:
@@ -39,8 +44,21 @@ def choose_variant(item: PreferencedItem, products: list[Product]) -> ResolvedIt
     if not counted:
         return _skip(item, INEXACT_CONVERSION)
     if len(counted) > 1:
-        return _skip(item, AMBIGUOUS)
-    variant, count = counted[0]
+        return _break_tie(item, counted, hints)
+    return _resolved(item, *counted[0])
+
+
+def _break_tie(
+    item: PreferencedItem, counted: list[tuple[Variant, int]], hints: set[str]
+) -> ResolvedItem | SkippedItem:
+    """Several variants already fit the message and rule book. Exactly one hinted one decides."""
+    hinted = [(variant, count) for variant, count in counted if variant.spin_id in hints]
+    if len(hinted) == 1:
+        return _resolved(item, *hinted[0])
+    return _skip(item, AMBIGUOUS)
+
+
+def _resolved(item: PreferencedItem, variant: Variant, count: int) -> ResolvedItem:
     return ResolvedItem(
         name=item.name,
         spin_id=variant.spin_id,
