@@ -1,3 +1,4 @@
+import sqlite3
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from datetime import UTC, datetime
@@ -9,7 +10,7 @@ import structlog
 import typer
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from chat2cart.cart.worker import start_cart_worker
+from chat2cart.cart.worker import FailureHook, start_cart_worker
 from chat2cart.cli import HTTP_TIMEOUT_SECONDS, build_swiggy_client
 from chat2cart.config import CONFIG_ERROR_EXIT_CODE, Settings, load_settings
 from chat2cart.db.connection import connect
@@ -18,6 +19,11 @@ from chat2cart.inbox import start_inbox_consumer
 from chat2cart.llm.adapter import LLMAdapter
 from chat2cart.logging import configure_logging
 from chat2cart.notify.channels import notify_from_settings
+from chat2cart.ops.failures import (
+    alert_for_error,
+    check_health,
+    schedule_health_check,
+)
 from chat2cart.pipeline.handler import pipeline_job_handler
 from chat2cart.pipeline.state import PipelineDeps
 from chat2cart.scheduling.queueing import MessageHandler, message_handler
@@ -77,9 +83,10 @@ def main() -> Service:
     _release_queue(settings)
     handler = pipeline_job_handler(settings.db_path, lambda: _open_deps(settings))
     scheduler = build_scheduler(settings, lambda: _release_queue(settings))
+    schedule_health_check(scheduler, lambda: _check_health(settings))
     service = Service(
         [
-            start_cart_worker(settings.db_path, handler),
+            start_cart_worker(settings.db_path, handler, on_failure=_alert_on_failure(settings)),
             start_inbox_consumer(settings.db_path, _message_handler(settings, scheduler)),
             SchedulerPart(scheduler),
         ]
@@ -95,6 +102,18 @@ def _now() -> datetime:
 def _release_queue(settings: Settings) -> None:
     with closing(connect(settings.db_path)) as conn:
         release_queue(conn, _now(), settings)
+
+
+def _check_health(settings: Settings) -> None:
+    with closing(connect(settings.db_path)) as conn:
+        check_health(conn, _now(), notify_from_settings(settings))
+
+
+def _alert_on_failure(settings: Settings) -> FailureHook:
+    def alert(conn: sqlite3.Connection, error: Exception) -> None:
+        alert_for_error(conn, error, notify_from_settings(settings), _now())
+
+    return alert
 
 
 def _message_handler(settings: Settings, scheduler: BackgroundScheduler) -> MessageHandler:

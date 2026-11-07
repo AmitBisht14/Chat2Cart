@@ -18,6 +18,8 @@ def compose_summary(report: RunReport) -> str:
         f"Reduced: {_reduced(report)}",
         f"Total: {_total(report)}",
     ]
+    if report.diffs:
+        lines.append(f"Mismatch: {_mismatch(report)}")
     if report.below_minimum:
         lines.append(f"Below the ₹{MIN_ORDER_RUPEES} minimum order.")
     lines.append(REMINDER)
@@ -34,6 +36,19 @@ def _skipped(report: RunReport) -> str:
 
 def _reduced(report: RunReport) -> str:
     return _joined(f"{item.name} {item.requested}->{item.applied}" for item in report.reduced)
+
+
+def _mismatch(report: RunReport) -> str:
+    """Where the cart read back differs from what was written: wanted->found, by product name."""
+    names = {item.spin_id: item.variant_name for item in report.added}
+    return _joined(
+        f"{names.get(diff.spin_id, diff.spin_id)} {_count(diff.intended)}->{_count(diff.actual)}"
+        for diff in report.diffs
+    )
+
+
+def _count(quantity: int | None) -> str:
+    return NONE if quantity is None else str(quantity)
 
 
 def _total(report: RunReport) -> str:
