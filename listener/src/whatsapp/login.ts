@@ -55,7 +55,7 @@ export async function login(options: LoginOptions): Promise<LoginResult> {
   return linkDevice(options, method);
 }
 
-function isRegistered(sessionDir: string): boolean {
+export function isRegistered(sessionDir: string): boolean {
   const file = path.join(sessionDir, CREDS_FILE);
   if (!existsSync(file)) return false;
   const parsed = registeredCreds.safeParse(readJson(file));
