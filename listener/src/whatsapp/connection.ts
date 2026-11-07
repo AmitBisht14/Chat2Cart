@@ -1,7 +1,7 @@
-import makeWASocket, { DisconnectReason, useMultiFileAuthState } from "@whiskeysockets/baileys";
+import { DisconnectReason, useMultiFileAuthState } from "@whiskeysockets/baileys";
 import type { BaileysEventMap, WAMessage, WASocket } from "@whiskeysockets/baileys";
 import type { Logger } from "pino";
-import { z } from "zod";
+import { createSocket, statusCodeOf } from "./socket.js";
 
 export const BASE_RETRY_DELAY_MS = 500;
 export const MAX_RETRY_DELAY_MS = 30_000;
@@ -23,8 +23,6 @@ type Session = {
   isStopped: boolean;
 };
 
-const disconnectError = z.object({ output: z.object({ statusCode: z.number() }) });
-
 export function startConnection(options: ConnectionOptions): Connection {
   const session: Session = { socket: undefined, timer: undefined, retries: 0, isStopped: false };
   connect(options, session);
@@ -41,12 +39,7 @@ function connect(options: ConnectionOptions, session: Session): void {
 async function openSocket(options: ConnectionOptions, session: Session): Promise<void> {
   const { state, saveCreds } = await useMultiFileAuthState(options.sessionDir);
   if (session.isStopped) return;
-  const socket = makeWASocket({
-    auth: state,
-    markOnlineOnConnect: false,
-    // Baileys logs at debug level with message details; keep only its warnings and errors.
-    logger: options.logger.child({ component: "baileys" }, { level: "warn" }),
-  });
+  const socket = createSocket(state, options.logger);
   session.socket = socket;
   socket.ev.on("creds.update", () => {
     saveCreds().catch((error: unknown) => {
@@ -92,11 +85,6 @@ function handleConnectionUpdate(
   }
   options.logger.warn({ statusCode }, "whatsapp_connection_closed");
   scheduleReconnect(options, session);
-}
-
-function statusCodeOf(error: unknown): number | undefined {
-  const parsed = disconnectError.safeParse(error);
-  return parsed.success ? parsed.data.output.statusCode : undefined;
 }
 
 function scheduleReconnect(options: ConnectionOptions, session: Session): void {
