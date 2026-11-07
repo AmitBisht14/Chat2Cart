@@ -112,7 +112,7 @@ def schedule_health_check(scheduler: BackgroundScheduler, check: Callable[[], ob
 
 
 def _check_listener(conn: sqlite3.Connection, now: datetime, notify: Notify) -> None:
-    listener = _listener_state(conn)
+    listener = listener_state(conn)
     if listener is not None and listener.state == "logged_out":
         send_alert(
             conn,
@@ -122,7 +122,7 @@ def _check_listener(conn: sqlite3.Connection, now: datetime, notify: Notify) -> 
             notify,
             now,
         )
-    elif listener is None or _is_stale(listener, now):
+    elif listener is None or is_stale(listener, now):
         send_alert(
             conn,
             "listener.stopped",
@@ -135,10 +135,10 @@ def _check_listener(conn: sqlite3.Connection, now: datetime, notify: Notify) -> 
         structlog.get_logger().warning("listener_stale")
 
 
-def _listener_state(conn: sqlite3.Connection) -> ListenerState | None:
+def listener_state(conn: sqlite3.Connection) -> ListenerState | None:
     row = conn.execute("SELECT state, heartbeat_at FROM whatsapp_state WHERE id = 1").fetchone()
     return None if row is None else ListenerState.model_validate(dict(row))
 
 
-def _is_stale(listener: ListenerState, now: datetime) -> bool:
+def is_stale(listener: ListenerState, now: datetime) -> bool:
     return listener.heartbeat_at is None or now - listener.heartbeat_at > LISTENER_STALE_AFTER

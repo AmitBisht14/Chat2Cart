@@ -62,6 +62,19 @@ class TokenManager:
         structlog.get_logger().info("token_refreshed", expires_at=new_tokens.expires_at.isoformat())
         return new_tokens
 
+    def expires_at(self) -> datetime | None:
+        """When the access token expires, or None when there are no usable tokens.
+
+        Only the time is returned, so a status display can show it without touching a secret.
+        """
+        stored = self._store.get(SWIGGY_TOKENS)
+        if stored is None:
+            return None
+        try:
+            return TokenSet.model_validate_json(stored).expires_at
+        except ValidationError:
+            return None
+
     def needs_login(self) -> bool:
         stored = self._store.get(SWIGGY_TOKENS)
         if stored is None:

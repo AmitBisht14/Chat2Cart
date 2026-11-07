@@ -1,19 +1,24 @@
 import asyncio
 import webbrowser
 from collections.abc import Callable, Coroutine
+from contextlib import closing
 from typing import Annotated
 
 import httpx
 import typer
 
 from chat2cart.config import DEFAULT_ADDRESS_ENV, ENV_FILE, load_settings, save_env_value
+from chat2cart.db.connection import connect
+from chat2cart.db.migrate import migrate
 from chat2cart.logging import configure_logging
+from chat2cart.ops.status import StatusRow, has_problem, status_rows
 from chat2cart.secrets import LLM_API_KEY, KeychainSecretStore, SecretStore
 from chat2cart.swiggy.addresses import Address, list_addresses
 from chat2cart.swiggy.cart import Cart, CartItem, read_cart, write_cart
 from chat2cart.swiggy.client import SwiggyClient
 from chat2cart.swiggy.errors import AuthError, NeedsLoginError, SwiggyError
 from chat2cart.swiggy.oauth import login as swiggy_login
+from chat2cart.swiggy.oauth import utc_now
 from chat2cart.swiggy.products import Product, Variant, search
 from chat2cart.swiggy.tokens import TokenManager
 
@@ -117,6 +122,30 @@ def ask_for_address(addresses: list[Address]) -> Address:
         if 1 <= number <= len(addresses):
             return addresses[number - 1]
         typer.echo(f"Enter a number from 1 to {len(addresses)}.")
+
+
+@app.command("status")
+def status() -> None:
+    """Show the health of the app. A problem starts with ! and says what to run; exit code 1."""
+    settings = load_settings()
+    with (
+        closing(connect(settings.db_path)) as conn,
+        httpx.Client(timeout=HTTP_TIMEOUT_SECONDS) as http,
+    ):
+        migrate(conn)
+        rows = status_rows(conn, settings, TokenManager(build_secret_store(), http), utc_now())
+    for line in format_status(rows):
+        typer.echo(line)
+    if has_problem(rows):
+        raise typer.Exit(1)
+
+
+def format_status(rows: list[StatusRow]) -> list[str]:
+    item_width = max(len(item) for item, _, _ in rows)
+    value_width = max(len(value) for _, value, _ in rows)
+    return [
+        f"{item:<{item_width}}  {value:<{value_width}}  {fix}".rstrip() for item, value, fix in rows
+    ]
 
 
 @app.command("prototype")
