@@ -18,11 +18,19 @@ def started_env(valid_env: dict[str, str], monkeypatch: pytest.MonkeyPatch, tmp_
 
 
 def test_main_creates_and_migrates_the_database(started_env: Path, tmp_path: Path) -> None:
-    main()
+    main().stop()
 
     db_path = tmp_path / "data" / "chat2cart.sqlite"
     version = connect(db_path).execute("SELECT version FROM schema_meta").fetchone()[0]
     assert version == 1
+
+
+def test_main_starts_the_cart_worker(started_env: Path) -> None:
+    worker = main()
+    try:
+        assert worker.is_alive()
+    finally:
+        worker.stop()
 
 
 def test_main_fails_fast_with_line_numbers_on_an_invalid_rule_book(

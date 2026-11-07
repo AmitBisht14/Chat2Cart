@@ -1,3 +1,4 @@
+import asyncio
 import sqlite3
 import time
 import uuid
@@ -6,16 +7,22 @@ from contextlib import closing
 from datetime import datetime
 from pathlib import Path
 
+import httpx
 import structlog
 import typer
 from pydantic import BaseModel
 
-from chat2cart.config import CONFIG_ERROR_EXIT_CODE, load_settings
+from chat2cart.cart.merge import MergeResult, merge_into_cart
+from chat2cart.cart.worker import CartWorker, merge_job_handler, start_cart_worker
+from chat2cart.cli import HTTP_TIMEOUT_SECONDS, build_swiggy_client
+from chat2cart.config import CONFIG_ERROR_EXIT_CODE, Settings, load_settings
 from chat2cart.db.connection import connect
 from chat2cart.db.migrate import migrate
 from chat2cart.logging import configure_logging
+from chat2cart.swiggy.errors import BadInputError
 from chat2cart.swiggy.oauth import utc_now
 from chat2cart.understanding.rulebook import RuleBookError, load_rulebook
+from chat2cart.understanding.schemas import ResolvedItem
 
 POLL_INTERVAL_SECONDS = 1.0
 
@@ -113,13 +120,28 @@ class InboxConsumer:
         return self._clock().isoformat()
 
 
-def main() -> None:
+def main() -> CartWorker:
+    """Start-up: migrate the database, check the rule book, start the cart worker."""
     settings = load_settings()
     configure_logging(settings)
     _load_rulebook_or_exit(settings.rulebook_path)
     with closing(connect(settings.db_path)) as conn:
         version = migrate(conn)
     structlog.get_logger().info("database_ready", schema_version=version)
+    worker = start_cart_worker(settings.db_path, merge_job_handler(_merge_runner(settings)))
+    structlog.get_logger().info("cart_worker_started")
+    return worker
+
+
+def _merge_runner(settings: Settings) -> Callable[[list[ResolvedItem]], MergeResult]:
+    def run_merge(items: list[ResolvedItem]) -> MergeResult:
+        address_id = settings.default_address_id
+        if address_id is None:
+            raise BadInputError("No delivery address is chosen. Run chat2cart swiggy address.")
+        with httpx.Client(timeout=HTTP_TIMEOUT_SECONDS) as http:
+            return asyncio.run(merge_into_cart(build_swiggy_client(http), address_id, items))
+
+    return run_merge
 
 
 def _load_rulebook_or_exit(path: Path) -> None:
