@@ -9,6 +9,8 @@
   Swiggy tools are never bound to the LLM; code decides which tool to call.
 - Protected file: `agent/src/chat2cart/swiggy/allowlist.py` (the only Swiggy tools the code may call).
   Changes need human review; the story runner (P02) does not auto-merge them.
+- Baileys: `@whiskeysockets/baileys` is pinned exactly to `7.0.0-rc14`. Chosen over stable 6.7.x because its message keys carry the
+  LID alt fields the sender filter needs (P20), and it has no git-URL dependency (6.7.x pulls `libsignal` from GitHub, which the Docker image cannot install).
 - Strict rule: never place an order. Checkout, payment and order-confirmation tools must never be called.
 - Git: author and commit as `Amit Bisht <bishtamith@gmail.com>` (set `git config user.name/user.email` first).
   No Claude author, `Co-Authored-By` or session trailers in commit messages or PR descriptions.

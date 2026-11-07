@@ -5,6 +5,8 @@ import { loadConfig } from "./config.js";
 import type { ListenerConfig } from "./config.js";
 import { DatabaseSchemaError, openDatabase } from "./db.js";
 import { createLogger } from "./logger.js";
+import { startConnection } from "./whatsapp/connection.js";
+import type { Connection } from "./whatsapp/connection.js";
 
 export const SERVICE_NAME = "chat2cart-listener";
 const SCHEMA_ERROR_EXIT_CODE = 1;
@@ -13,6 +15,7 @@ export type ListenerContext = {
   readonly config: ListenerConfig;
   readonly logger: Logger;
   readonly db: Database.Database;
+  readonly connection: Connection;
 };
 
 export function start(): ListenerContext {
@@ -20,7 +23,14 @@ export function start(): ListenerContext {
   const db = openDatabaseOrExit(config.dbPath);
   const logger = createLogger(config);
   logger.info("listener_started");
-  return { config, logger, db };
+  const connection = startConnection({
+    sessionDir: config.sessionDir,
+    logger,
+    onMessage: (message) => {
+      logger.info({ messageId: message.key.id }, "message_received");
+    },
+  });
+  return { config, logger, db, connection };
 }
 
 function openDatabaseOrExit(dbPath: string): Database.Database {
