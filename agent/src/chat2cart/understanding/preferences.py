@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from chat2cart.understanding.dedupe import dedupe_by_name
 from chat2cart.understanding.rulebook import RuleEntry, normalise_name
 from chat2cart.understanding.schemas import ExtractedItem, PreferencedItem, SkippedItem
 
@@ -13,11 +14,11 @@ def apply_preferences(
     """Attach the rule book's brand, size and quantity to each item.
 
     An item is matched to a rule by its normalised name or alias. No fuzzy matching: an item with
-    no rule is skipped as `no_rule`.
+    no rule is skipped as `no_rule`. Repeated names are merged first, before defaults are filled in.
     """
     preferenced: list[PreferencedItem] = []
     skipped: list[SkippedItem] = []
-    for item in items:
+    for item in dedupe_by_name(items):
         rule = rulebook.get(normalise_name(item.name))
         if rule is None:
             skipped.append(SkippedItem(name=item.name, reason=NO_RULE))
@@ -36,6 +37,7 @@ def _with_rule(item: ExtractedItem, rule: RuleEntry) -> PreferencedItem:
         brands=list(rule.brands),
         size=rule.size,
         substitute=rule.substitute,
+        sources=item.sources,
     )
 
 

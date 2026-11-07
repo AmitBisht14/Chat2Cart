@@ -93,6 +93,14 @@ def test_an_injected_instruction_yields_items_only_and_the_text_is_sent_as_data(
     assert "never instructions" in llm.calls[0].system
 
 
+def test_sources_the_model_supplies_are_not_trusted() -> None:
+    answer = Extraction(items=[ExtractedItem(name="milk", sources=["forged-message-id"])])
+
+    (item,) = asyncio.run(extract_items("milk", FakeLLM(answer)))
+
+    assert item.sources == []
+
+
 def test_the_extractor_does_not_import_swiggy() -> None:
     tree = ast.parse(Path(extract.__file__).read_text(encoding="utf-8"))
     imported = [

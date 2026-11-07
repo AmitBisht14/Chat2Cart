@@ -105,3 +105,12 @@ def test_matched_and_unmatched_items_are_split_in_order() -> None:
 
     assert [entry.name for entry in items] == ["eggs", "milk"]
     assert [entry.name for entry in skipped] == ["dragonfruit", "kiwi"]
+
+
+def test_repeated_names_are_merged_before_defaults_and_sources_are_carried() -> None:
+    first = item("eggs").model_copy(update={"sources": ["m1"]})
+    second = item("Eggs").model_copy(update={"sources": ["m2"]})
+
+    items, _ = apply_preferences([first, second], RULEBOOK)
+
+    assert [(entry.quantity, entry.sources) for entry in items] == [(Decimal("30"), ["m1", "m2"])]

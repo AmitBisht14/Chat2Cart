@@ -24,4 +24,5 @@ Rules:
 async def extract_items(order_text: str, llm: StructuredLLM) -> list[ExtractedItem]:
     """List the items in an order message. An invalid model answer raises LLMInvalidOutputError."""
     extraction = await llm.structured(Extraction, EXTRACT_SYSTEM_PROMPT, wrap_untrusted(order_text))
-    return extraction.items
+    # sources are message ids set by our code later; whatever the model put there is not trusted.
+    return [item.model_copy(update={"sources": []}) for item in extraction.items]

@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from chat2cart.swiggy.client import SwiggyClient
 from chat2cart.swiggy.products import Product, Variant, search
+from chat2cart.understanding.dedupe import dedupe_by_variant
 from chat2cart.understanding.hints import load_hints
 from chat2cart.understanding.packsize import amount_of, pack_count, parse_amount
 from chat2cart.understanding.schemas import PreferencedItem, ResolvedItem, SkippedItem
@@ -30,7 +31,7 @@ async def resolve_items(
             resolved.append(outcome)
         else:
             skipped.append(outcome)
-    return resolved, skipped
+    return dedupe_by_variant(resolved), skipped
 
 
 def choose_variant(
@@ -65,6 +66,7 @@ def _resolved(item: PreferencedItem, variant: Variant, count: int) -> ResolvedIt
         sku_id=variant.sku_id,
         variant_name=variant.name,
         quantity=count,
+        sources=item.sources,
     )
 
 
