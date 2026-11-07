@@ -23,7 +23,7 @@
     "vitest": "^3.2.7"
   },
   "dependencies": {
-    "better-sqlite3": "12.11.1",
+    "better-sqlite3": "12.9.0",
     "dotenv": "^18.0.9",
     "pino": "^10.4.0",
     "pino-roll": "^4.0.0",
