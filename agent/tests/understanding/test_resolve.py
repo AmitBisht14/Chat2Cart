@@ -210,3 +210,11 @@ def test_two_items_resolved_to_the_same_variant_become_one_line_with_both_source
     resolved, _ = asyncio.run(resolve_items(items, logged_in_client(transport), ADDRESS_ID))
 
     assert [(r.spin_id, r.sources) for r in resolved] == [("EGG-FF-30", ["m1", "m2"])]
+
+
+def test_nothing_to_resolve_makes_no_swiggy_calls() -> None:
+    transport = FakeSwiggyTransport(*NO_HINTS)
+
+    resolved, skipped = asyncio.run(resolve_items([], logged_in_client(transport), ADDRESS_ID))
+
+    assert (resolved, skipped, transport.calls) == ([], [], [])

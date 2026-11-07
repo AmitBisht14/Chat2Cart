@@ -21,6 +21,8 @@ async def resolve_items(
     Search is read-only. When in doubt the item is skipped: the cart never gets a guess. The
     user's go-to items and recent orders are read once and only break ties.
     """
+    if not items:
+        return [], []
     hints = await load_hints(client, address_id)
     resolved: list[ResolvedItem] = []
     skipped: list[SkippedItem] = []

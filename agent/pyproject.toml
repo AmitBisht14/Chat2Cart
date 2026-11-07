@@ -8,6 +8,7 @@ dependencies = [
     "keyring>=25.7.0",
     "langchain==1.4.9",
     "langchain-anthropic==1.7.10",
+    "langgraph==1.2.20",
     "mcp>=2.3.0",
     "pydantic-settings>=2.16.2",
     "structlog>=26.1.0",

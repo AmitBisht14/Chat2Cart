@@ -10,13 +10,11 @@ import pytest
 from chat2cart.cart.worker import (
     ERROR_MAX_LENGTH,
     enqueue_job,
-    merge_job_handler,
     run_next_job,
     start_cart_worker,
 )
 from chat2cart.db.connection import connect
 from chat2cart.db.migrate import migrate
-from chat2cart.understanding.schemas import ResolvedItem
 
 POLL = 0.01
 WAIT_SECONDS = 5.0
@@ -179,20 +177,3 @@ def test_a_stopped_worker_is_no_longer_alive(db_path: Path) -> None:
     worker.stop()
 
     assert worker.is_alive() is False
-
-
-def test_the_merge_handler_passes_the_jobs_resolved_items_to_the_merge() -> None:
-    merged: list[list[ResolvedItem]] = []
-    handler = merge_job_handler(merged.append)
-    item = {"name": "atta", "spin_id": "A1", "sku_id": "S1", "variant_name": "Atta", "quantity": 2}
-
-    handler("daytime", {"items": [item]})
-
-    assert [[(i.spin_id, i.quantity) for i in items] for items in merged] == [[("A1", 2)]]
-
-
-def test_the_merge_handler_rejects_a_payload_without_valid_items() -> None:
-    handler = merge_job_handler(lambda _items: None)
-
-    with pytest.raises(ValueError):
-        handler("daytime", {"items": [{"spin_id": "A1"}]})

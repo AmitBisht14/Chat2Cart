@@ -8,12 +8,12 @@ from pathlib import Path
 from time import monotonic
 
 import structlog
-from pydantic import BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 
+from chat2cart.background import BackgroundLoop
 from chat2cart.db.connection import connect
 from chat2cart.logging import redact_value
 from chat2cart.swiggy.oauth import utc_now
-from chat2cart.understanding.schemas import ResolvedItem
 
 POLL_INTERVAL_SECONDS = 1.0
 ERROR_MAX_LENGTH = 500
@@ -31,10 +31,6 @@ CLAIM_NEXT = """
 FINISH = "UPDATE cart_jobs SET status = ?, finished_at = ?, error = ? WHERE id = ?"
 
 PAYLOAD = TypeAdapter(dict[str, object])
-
-
-class MergePayload(BaseModel):
-    items: list[ResolvedItem]
 
 
 def enqueue_job(
@@ -82,57 +78,34 @@ def reset_running_jobs(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def merge_job_handler(run_merge: Callable[[list[ResolvedItem]], object]) -> JobHandler:
-    """A handler that merges the job's resolved items into the Swiggy cart."""
-
-    def handle(_source: str, payload: dict[str, object]) -> None:
-        run_merge(MergePayload.model_validate(payload).items)
-
-    return handle
-
-
-class CartWorker:
-    """One background thread that runs cart jobs one after another, oldest first."""
-
-    def __init__(self, db_path: Path, handler: JobHandler, poll_interval: float) -> None:
-        self._db_path = db_path
-        self._handler = handler
-        self._poll_interval = poll_interval
-        self._stop = threading.Event()
-        self._thread = threading.Thread(target=self._run, name="cart-worker", daemon=True)
-
-    def start(self) -> None:
-        self._thread.start()
-
-    def stop(self) -> None:
-        self._stop.set()
-        self._thread.join(timeout=10)
-
-    def is_alive(self) -> bool:
-        return self._thread.is_alive()
-
-    def _run(self) -> None:
-        # SQLite connections stay on the thread that made them, so the worker opens its own.
-        with closing(connect(self._db_path)) as conn:
-            reset_running_jobs(conn)
-            while not self._stop.is_set():
-                if not self._run_one(conn):
-                    self._stop.wait(self._poll_interval)
-
-    def _run_one(self, conn: sqlite3.Connection) -> bool:
-        try:
-            return run_next_job(conn, self._handler)
-        except sqlite3.Error as error:
-            structlog.get_logger().error("cart_worker_db_error", error_type=type(error).__name__)
-            return False
-
-
 def start_cart_worker(
     db_path: Path, handler: JobHandler, poll_interval: float = POLL_INTERVAL_SECONDS
-) -> CartWorker:
-    worker = CartWorker(db_path, handler, poll_interval)
-    worker.start()
-    return worker
+) -> BackgroundLoop:
+    """One background thread that runs cart jobs one after another, oldest first."""
+    loop = BackgroundLoop(
+        "cart-worker", lambda stop: _run_worker(db_path, handler, poll_interval, stop)
+    )
+    loop.start()
+    return loop
+
+
+def _run_worker(
+    db_path: Path, handler: JobHandler, poll_interval: float, stop: threading.Event
+) -> None:
+    # SQLite connections stay on the thread that made them, so the worker opens its own.
+    with closing(connect(db_path)) as conn:
+        reset_running_jobs(conn)
+        while not stop.is_set():
+            if not _run_one(conn, handler):
+                stop.wait(poll_interval)
+
+
+def _run_one(conn: sqlite3.Connection, handler: JobHandler) -> bool:
+    try:
+        return run_next_job(conn, handler)
+    except sqlite3.Error as error:
+        structlog.get_logger().error("cart_worker_db_error", error_type=type(error).__name__)
+        return False
 
 
 def _run_handler(handler: JobHandler, source: str, payload_json: str) -> str | None:
