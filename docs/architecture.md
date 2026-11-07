@@ -5,3 +5,7 @@ Chat2Cart has two parts that share only a SQLite database (WAL mode). `listener/
 ## Batch dedupe rule
 
 Within one batch, duplicates are merged, never summed, so repeated reminders cannot inflate an order. Items are merged twice: by normalised name (lowercase, trimmed, spaces collapsed) before product matching, and by variant id after matching, so two names that resolve to the same product ("ande" and "eggs") become one line. When a group has one stated quantity, that quantity is used. When several are stated in the same unit, the larger wins. When the units differ, the first is kept. With no quantities, the item counts once. Each merged item keeps the ids of every inbound message it came from. Merging with items already in the Swiggy cart is a separate step (cart merge).
+
+## Cart merge rule
+
+`update_cart` replaces the whole cart, so every write is the full list: the lines already in the cart (hand-added ones included) plus the new items. When a variant is already in the cart, the larger quantity is kept, never the sum, so a job that is retried does not double it. After the write the cart is read back and any difference from the intended list is reported.
