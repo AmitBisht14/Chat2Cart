@@ -8,15 +8,12 @@ from chat2cart.swiggy.errors import BadInputError, SwiggyError
 
 
 class CartItem(BaseModel):
-    """One cart line. requested_quantity is set only on reduced items: what was asked for."""
-
     model_config = ConfigDict(populate_by_name=True)
 
     spin_id: str = Field(alias="spinId")
     sku_id: str = Field(alias="skuId")
     name: str = Field(alias="itemName")
     quantity: int
-    requested_quantity: int | None = Field(default=None, alias="requestedQuantity")
 
 
 class Cart(BaseModel):
@@ -32,13 +29,25 @@ class Cart(BaseModel):
         return re.sub(r"[^\d.]", "", value) if isinstance(value, str) else value
 
 
+class ReducedItem(BaseModel):
+    """A line Swiggy capped. It carries no skuId, so match it to a cart line by spin_id."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    spin_id: str = Field(alias="spinId")
+    name: str = Field(alias="itemName")
+    requested_quantity: int = Field(alias="requestedQuantity")
+    capped_quantity: int = Field(alias="cappedQuantity")
+    reason: str | None = None
+
+
 class CartWriteResult(BaseModel):
     """What Swiggy changed while writing: out-of-stock items it dropped, quantities it capped."""
 
     model_config = ConfigDict(populate_by_name=True)
 
     removed: list[CartItem] = Field(default_factory=list, alias="removedOutOfStockItems")
-    reduced: list[CartItem] = Field(default_factory=list, alias="reducedQuantityItems")
+    reduced: list[ReducedItem] = Field(default_factory=list, alias="reducedQuantityItems")
 
 
 async def read_cart(client: SwiggyClient) -> Cart:
