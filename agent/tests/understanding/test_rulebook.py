@@ -21,8 +21,8 @@ def test_the_committed_example_parses_and_eggs_has_every_field() -> None:
         name="Eggs",
         aliases=["egg", "ande", "anda"],
         brands=["Farm Fresh", "Country Eggs"],
-        default_quantity=30,
-        min_quantity=6,
+        default_quantity=1,
+        min_quantity=1,
         size="30 pcs",
         substitute="same_brand",
     )

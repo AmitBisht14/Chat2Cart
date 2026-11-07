@@ -13,8 +13,8 @@ Keys:
 | --- | --- |
 | `aliases` | Other names for the item, comma-separated. Hindi and Hinglish names go here (`ande`, `doodh`). A message that says "ande" uses the Eggs entry. |
 | `brand` | Preferred brands, comma-separated, in order of preference. |
-| `default_quantity` | How many to order when the message gives no quantity (a whole number). |
-| `min_quantity` | The least to order of this item (a whole number). |
+| `default_quantity` | How many packs to order when the message gives no quantity (a whole number). With a `size`, it is a number of packs of that size: `size: 30 pcs` and `default_quantity: 1` is one tray of 30. |
+| `min_quantity` | The least number of packs to order when the default is used (a whole number). |
 | `size` | The pack size to look for, like `500 g`, `2 kg`, `1 l` or `30 pcs`. |
 | `substitute` | What to do when the item is out of stock: `never` (the default), `same_brand` (another size or pack of the same brand) or `any`. |
 
@@ -24,8 +24,8 @@ A mistake in the file is reported with its line number and the app will not star
 
 - aliases: egg, ande, anda
 - brand: Farm Fresh, Country Eggs
-- default_quantity: 30
-- min_quantity: 6
+- default_quantity: 1
+- min_quantity: 1
 - size: 30 pcs
 - substitute: same_brand
 
