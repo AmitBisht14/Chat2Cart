@@ -17,6 +17,7 @@ from chat2cart.db.migrate import migrate
 from chat2cart.inbox import start_inbox_consumer
 from chat2cart.llm.adapter import LLMAdapter
 from chat2cart.logging import configure_logging
+from chat2cart.notify.channels import notify_from_settings
 from chat2cart.pipeline.handler import pipeline_job_handler
 from chat2cart.pipeline.state import PipelineDeps
 from chat2cart.scheduling.queueing import MessageHandler, message_handler
@@ -123,6 +124,7 @@ def _open_deps(settings: Settings) -> Iterator[PipelineDeps]:
             swiggy=build_swiggy_client(http),
             load_rulebook=lambda: load_rulebook(settings.rulebook_path),
             address_id=address_id,
+            notify=notify_from_settings(settings),
         )
 
 
