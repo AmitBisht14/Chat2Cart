@@ -1,9 +1,13 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 from chat2cart.app import main
 from chat2cart.db.connection import connect
+from chat2cart.db.migrate import migrate
+from chat2cart.db.repos import enqueue_request
+from chat2cart.understanding.schemas import ExtractedItem
 
 EXAMPLE_RULEBOOK = Path(__file__).parents[2] / "rulebook.example.md"
 
@@ -55,3 +59,29 @@ def test_main_fails_fast_when_the_rule_book_is_missing(
 
     assert exit_info.value.code == 2
     assert "Rule book not found" in capsys.readouterr().err
+
+
+def test_main_releases_a_queue_missed_overnight_when_it_starts_inside_the_window(
+    started_env: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db_path = tmp_path / "data" / "chat2cart.sqlite"
+    with connect(db_path) as conn:
+        migrate(conn)
+        enqueue_request(conn, "m1", [ExtractedItem(name="atta")])
+    monkeypatch.setattr("chat2cart.app._now", lambda: datetime(2026, 11, 7, 4, 30, tzinfo=UTC))
+
+    service = main()
+    service.stop()
+
+    with connect(db_path) as reader:
+        statuses = [row["status"] for row in reader.execute("SELECT status FROM request_queue")]
+        sources = [row["source"] for row in reader.execute("SELECT source FROM cart_jobs")]
+    assert (statuses, sources) == (["released"], ["queue"])
+
+
+def test_main_starts_the_release_scheduler(started_env: Path) -> None:
+    service = main()
+    try:
+        assert service.is_alive()
+    finally:
+        service.stop()

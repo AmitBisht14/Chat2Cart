@@ -1,12 +1,14 @@
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Protocol
 
 import httpx
 import structlog
 import typer
+from apscheduler.schedulers.background import BackgroundScheduler
 
-from chat2cart.background import BackgroundLoop
 from chat2cart.cart.worker import start_cart_worker
 from chat2cart.cli import HTTP_TIMEOUT_SECONDS, build_swiggy_client
 from chat2cart.config import CONFIG_ERROR_EXIT_CODE, Settings, load_settings
@@ -18,15 +20,36 @@ from chat2cart.logging import configure_logging
 from chat2cart.pipeline.handler import pipeline_job_handler
 from chat2cart.pipeline.state import PipelineDeps
 from chat2cart.scheduling.queueing import MessageHandler, message_handler
+from chat2cart.scheduling.release import build_scheduler, release_queue
 from chat2cart.secrets import KeychainSecretStore
 from chat2cart.swiggy.errors import BadInputError
 from chat2cart.understanding.rulebook import RuleBookError, load_rulebook
 
 
+class Part(Protocol):
+    def is_alive(self) -> bool: ...
+
+    def stop(self) -> None: ...
+
+
+class SchedulerPart:
+    """The release scheduler, started and stopped like the background loops."""
+
+    def __init__(self, scheduler: BackgroundScheduler) -> None:
+        self._scheduler = scheduler
+        scheduler.start()
+
+    def is_alive(self) -> bool:
+        return bool(self._scheduler.running)
+
+    def stop(self) -> None:
+        self._scheduler.shutdown(wait=False)
+
+
 class Service:
     """The running background parts of the agent."""
 
-    def __init__(self, parts: list[BackgroundLoop]) -> None:
+    def __init__(self, parts: list[Part]) -> None:
         self._parts = parts
 
     def is_alive(self) -> bool:
@@ -45,15 +68,27 @@ def main() -> Service:
     with closing(connect(settings.db_path)) as conn:
         version = migrate(conn)
     structlog.get_logger().info("database_ready", schema_version=version)
+    # A release missed while the app was down or the Mac asleep happens now, if inside the window.
+    _release_queue(settings)
     handler = pipeline_job_handler(settings.db_path, lambda: _open_deps(settings))
     service = Service(
         [
             start_cart_worker(settings.db_path, handler),
             start_inbox_consumer(settings.db_path, _message_handler(settings)),
+            SchedulerPart(build_scheduler(settings, lambda: _release_queue(settings))),
         ]
     )
     structlog.get_logger().info("agent_started")
     return service
+
+
+def _now() -> datetime:
+    return datetime.now(UTC)
+
+
+def _release_queue(settings: Settings) -> None:
+    with closing(connect(settings.db_path)) as conn:
+        release_queue(conn, _now(), settings)
 
 
 def _message_handler(settings: Settings) -> MessageHandler:
