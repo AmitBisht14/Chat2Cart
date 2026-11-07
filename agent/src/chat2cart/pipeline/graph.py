@@ -8,6 +8,17 @@ from langgraph.graph.state import CompiledStateGraph
 
 from chat2cart.pipeline import nodes
 from chat2cart.pipeline.state import OrderState, PipelineDeps, PipelinePayload
+from chat2cart.swiggy.errors import DomainError
+
+
+class PipelineStopped(Exception):
+    """Swiggy reported a business error mid-run. `state` is what the run had when it stopped."""
+
+    def __init__(self, error: DomainError, state: OrderState) -> None:
+        super().__init__(error.message)
+        self.error = error
+        self.state = state
+
 
 Node = Callable[[OrderState, PipelineDeps], Awaitable[OrderState]]
 NODES: dict[str, Node] = {
@@ -54,9 +65,22 @@ async def run_pipeline(
         }
         if job.extracted:
             start["extracted"] = job.extracted
-        return cast(OrderState, await build_graph(deps).ainvoke(start))
+        return await _run_graph(build_graph(deps), start)
     finally:
         structlog.contextvars.unbind_contextvars("run_id")
+
+
+async def _run_graph(
+    graph: CompiledStateGraph[OrderState, None, OrderState, OrderState], start: OrderState
+) -> OrderState:
+    """Run to the end. A Swiggy business error stops the run, with the state reached so far."""
+    latest = start
+    try:
+        async for state in graph.astream(start, stream_mode="values"):
+            latest = cast(OrderState, state)
+    except DomainError as error:
+        raise PipelineStopped(error, latest) from error
+    return latest
 
 
 def _start_at(state: OrderState) -> Literal["classify", "apply_rulebook"]:
