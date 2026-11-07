@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import Database from "better-sqlite3";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import pino from "pino";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -10,8 +12,10 @@ import {
   lastFakeSocket,
   resetFakeBaileys,
 } from "../fakes/baileys.js";
+import { createSchemaDatabase } from "../fakes/database.js";
 import type { FakeSocket } from "../fakes/fakeSocket.js";
-import { startConnection } from "../../src/whatsapp/connection.js";
+import { LOGGED_OUT_DETAIL, startConnection } from "../../src/whatsapp/connection.js";
+import { HEARTBEAT_INTERVAL_MS } from "../../src/whatsapp/state.js";
 
 vi.mock("@whiskeysockets/baileys", async () => {
   const { createBaileysMock } = await import("../fakes/baileys.js");
@@ -21,18 +25,32 @@ vi.mock("@whiskeysockets/baileys", async () => {
 const SESSION_DIR = "/tmp/chat2cart-test-session";
 const logger = pino({ level: "silent" });
 
+let folder: string;
+let db: Database.Database;
+
 beforeEach(() => {
   vi.useFakeTimers();
   resetFakeBaileys();
+  folder = mkdtempSync(path.join(tmpdir(), "chat2cart-connection-"));
+  const dbPath = path.join(folder, "chat2cart.sqlite");
+  createSchemaDatabase(dbPath, 1);
+  db = new Database(dbPath);
 });
 
 afterEach(() => {
+  db.close();
+  rmSync(folder, { recursive: true, force: true });
   vi.useRealTimers();
 });
 
 function connectionStarted(onMessage = vi.fn()): { stop: () => void; onMessage: typeof onMessage } {
-  const connection = startConnection({ sessionDir: SESSION_DIR, logger, onMessage });
+  const connection = startConnection({ sessionDir: SESSION_DIR, logger, db, onMessage });
   return { ...connection, onMessage };
+}
+
+function storedState(): { state: string; detail: string | null } | undefined {
+  const row = db.prepare("SELECT state, detail FROM whatsapp_state WHERE id = 1").get();
+  return row as { state: string; detail: string | null } | undefined;
 }
 
 async function lastSocket(): Promise<FakeSocket> {
@@ -137,4 +155,48 @@ it("stop_ends_the_socket_and_cancels_a_pending_reconnect", async () => {
 
   expect(socket.end).toHaveBeenCalled();
   expect(fakeBaileys.sockets).toHaveLength(1);
+});
+
+it("writes_connected_when_the_connection_opens", async () => {
+  connectionStarted();
+  const socket = await lastSocket();
+
+  socket.ev.emit("connection.update", { connection: "open" });
+
+  expect(storedState()?.state).toBe("connected");
+});
+
+it("writes_reconnecting_with_the_status_code_after_a_connection_loss_and_reconnects", async () => {
+  connectionStarted();
+  emitClose(await lastSocket(), STATUS_CONNECTION_LOST);
+
+  await vi.advanceTimersByTimeAsync(500);
+
+  expect(storedState()).toEqual({
+    state: "reconnecting",
+    detail: "connection closed (status 408)",
+  });
+  expect(fakeBaileys.sockets).toHaveLength(2);
+});
+
+it("writes_logged_out_and_never_reconnects_even_after_the_timers_run", async () => {
+  connectionStarted();
+  emitClose(await lastSocket(), STATUS_LOGGED_OUT);
+
+  await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000);
+
+  expect(storedState()).toEqual({ state: "logged_out", detail: LOGGED_OUT_DETAIL });
+  expect(fakeBaileys.sockets).toHaveLength(1);
+});
+
+it("stops_the_heartbeat_when_the_connection_closes", async () => {
+  connectionStarted();
+  const socket = await lastSocket();
+  socket.ev.emit("connection.update", { connection: "open" });
+  emitClose(socket, STATUS_CONNECTION_LOST);
+  const heartbeatAtClose = db.prepare("SELECT heartbeat_at FROM whatsapp_state").get();
+
+  await vi.advanceTimersByTimeAsync(HEARTBEAT_INTERVAL_MS * 3);
+
+  expect(db.prepare("SELECT heartbeat_at FROM whatsapp_state").get()).toEqual(heartbeatAtClose);
 });

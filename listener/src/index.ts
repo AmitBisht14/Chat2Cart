@@ -26,6 +26,7 @@ export function start(): ListenerContext {
   const connection = startConnection({
     sessionDir: config.sessionDir,
     logger,
+    db,
     onMessage: (message) => {
       logger.info({ messageId: message.key.id }, "message_received");
     },
