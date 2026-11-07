@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Turns WhatsApp messages into a ready Swiggy Instamart cart."
 requires-python = ">=3.12"
 dependencies = [
+    "apscheduler==3.11.3",
     "httpx>=0.28.1",
     "keyring>=25.7.0",
     "langchain==1.4.9",
@@ -38,6 +39,11 @@ select = ["E", "F", "I", "B", "UP"]
 [tool.mypy]
 strict = true
 files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+# APScheduler 3.x ships no type information.
+module = "apscheduler.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
