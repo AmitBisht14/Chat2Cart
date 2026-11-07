@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from chat2cart.app import InboxConsumer, InboxMessage
 from chat2cart.db.connection import connect
 from chat2cart.db.migrate import migrate
+from chat2cart.inbox import InboxConsumer, InboxMessage
 
 NOW = datetime(2026, 11, 7, 10, 0, tzinfo=UTC)
 
