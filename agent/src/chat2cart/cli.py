@@ -12,11 +12,12 @@ from chat2cart.db.connection import connect
 from chat2cart.db.migrate import migrate
 from chat2cart.logging import configure_logging
 from chat2cart.ops.status import StatusRow, has_problem, status_rows
-from chat2cart.secrets import LLM_API_KEY, KeychainSecretStore, SecretStore
+from chat2cart.secrets import LLM_API_KEY, SWIGGY_TOKENS, KeychainSecretStore, SecretStore
 from chat2cart.swiggy.addresses import Address, list_addresses
 from chat2cart.swiggy.cart import Cart, CartItem, read_cart, write_cart
 from chat2cart.swiggy.client import SwiggyClient
 from chat2cart.swiggy.errors import AuthError, NeedsLoginError, SwiggyError
+from chat2cart.swiggy.logout import logout_swiggy
 from chat2cart.swiggy.oauth import login as swiggy_login
 from chat2cart.swiggy.oauth import utc_now
 from chat2cart.swiggy.products import Product, Variant, search
@@ -33,6 +34,8 @@ login_app = typer.Typer(help="Log in to external services.")
 app.add_typer(login_app, name="login")
 swiggy_app = typer.Typer(help="Work with your Swiggy account.")
 app.add_typer(swiggy_app, name="swiggy")
+logout_app = typer.Typer(help="Disconnect external services and delete what is stored for them.")
+app.add_typer(logout_app, name="logout")
 
 
 @app.callback()
@@ -68,6 +71,30 @@ def login_swiggy() -> None:
         typer.echo(str(error), err=True)
         raise typer.Exit(1) from error
     typer.echo("Logged in to Swiggy. Tokens saved to the Keychain.")
+
+
+@logout_app.command("swiggy")
+def logout_swiggy_command() -> None:
+    """Log out of Swiggy: revoke the session and delete the stored tokens."""
+    store = build_secret_store()
+    if store.get(SWIGGY_TOKENS) is None:
+        typer.echo("Not logged in")
+        return
+    typer.confirm("Log out of Swiggy and delete stored tokens?", abort=True)
+    with build_http_client() as http:
+        outcome = logout_swiggy(store, http)
+    if outcome == "revoked":
+        typer.echo("Logged out of Swiggy. The stored tokens are deleted.")
+    else:
+        typer.echo(
+            "Warning: Swiggy did not confirm the logout. The stored tokens are deleted anyway; "
+            "the session ends on its own after 30 idle days.",
+            err=True,
+        )
+
+
+def build_http_client() -> httpx.Client:
+    return httpx.Client(timeout=HTTP_TIMEOUT_SECONDS)
 
 
 def open_authorize_url(url: str) -> None:

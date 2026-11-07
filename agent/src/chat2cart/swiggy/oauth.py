@@ -20,6 +20,7 @@ SWIGGY_AUTH_URL = "https://mcp.swiggy.com/auth"
 REGISTER_URL = f"{SWIGGY_AUTH_URL}/register"
 AUTHORIZE_URL = f"{SWIGGY_AUTH_URL}/authorize"
 TOKEN_URL = f"{SWIGGY_AUTH_URL}/token"
+LOGOUT_URL = f"{SWIGGY_AUTH_URL}/logout"
 REDIRECT_URI = "http://localhost/callback"
 # macOS lets unprivileged processes bind port 80 only on the wildcard address, not on 127.0.0.1.
 CALLBACK_HOST = "0.0.0.0"  # noqa: S104
