@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 from fakes.swiggy import FakeSwiggyTransport, load_swiggy_fixture, logged_in_client
 
-from chat2cart.swiggy.cart import CartWriteResult, read_cart, write_cart
+from chat2cart.swiggy.cart import CartWriteResult, ReducedItem, read_cart, write_cart
 from chat2cart.swiggy.errors import BadInputError, SwiggyError
 
 ADDRESS_ID = "addr-002"
@@ -67,12 +67,19 @@ def test_a_reduced_quantity_reports_what_was_asked_and_what_was_applied() -> Non
     )
     client = logged_in_client(transport)
 
-    async def run() -> tuple[int, int | None]:
+    async def run() -> ReducedItem:
         cart = await read_cart(client)
         result = await write_cart(client, cart.items, ADDRESS_ID)
-        return result.reduced[0].quantity, result.reduced[0].requested_quantity
+        return result.reduced[0]
 
-    assert asyncio.run(run()) == (3, 5)
+    reduced = asyncio.run(run())
+
+    assert (reduced.spin_id, reduced.requested_quantity, reduced.capped_quantity) == (
+        "0B2C3D4E",
+        99,
+        20,
+    )
+    assert reduced.reason == "Only 20 unit(s) of this item can be added per order."
 
 
 def test_write_cart_says_in_its_docs_that_it_replaces_the_entire_cart() -> None:
