@@ -8,6 +8,7 @@ from chat2cart.understanding.resolve import resolve_items
 from chat2cart.understanding.schemas import PreferencedItem, ResolvedItem, SkippedItem
 
 ADDRESS_ID = "addr-002"
+NO_HINTS: tuple[dict[str, object], ...] = ({"products": []}, {"orders": []})
 
 
 def item(
@@ -33,7 +34,7 @@ def item(
 def resolve(
     fixture: str, wanted: PreferencedItem
 ) -> tuple[list[ResolvedItem], list[SkippedItem], FakeSwiggyTransport]:
-    transport = FakeSwiggyTransport(load_swiggy_fixture(fixture))
+    transport = FakeSwiggyTransport(*NO_HINTS, load_swiggy_fixture(fixture))
     resolved, skipped = asyncio.run(
         resolve_items([wanted], logged_in_client(transport), ADDRESS_ID)
     )
@@ -68,9 +69,8 @@ def test_the_search_asks_for_the_item_name_and_the_address() -> None:
         "search_products_eggs", item("eggs", size="6 pcs", brands=["Farm Fresh"])
     )
 
-    assert [(call.name, call.arguments) for call in transport.calls] == [
-        ("search_products", {"addressId": ADDRESS_ID, "query": "eggs"})
-    ]
+    searches = [call for call in transport.calls if call.name == "search_products"]
+    assert [call.arguments for call in searches] == [{"addressId": ADDRESS_ID, "query": "eggs"}]
 
 
 def test_several_matching_variants_give_ambiguous() -> None:
@@ -179,6 +179,7 @@ def test_conversion_without_a_size_rule_skips_when_several_pack_sizes_divide_exa
 
 def test_every_item_ends_with_exactly_one_variant_or_one_skip_reason() -> None:
     transport = FakeSwiggyTransport(
+        *NO_HINTS,
         load_swiggy_fixture("search_products_eggs"),
         load_swiggy_fixture("search_products_none"),
         load_swiggy_fixture("search_products_atta"),

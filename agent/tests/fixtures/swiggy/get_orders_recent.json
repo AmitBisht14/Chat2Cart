@@ -1,0 +1,16 @@
+{
+  "orders": [
+    {
+      "orderId": "order-1",
+      "status": "DELIVERED",
+      "items": [
+        {
+          "spinId": "EGG-FF-6",
+          "skuId": "SKU-FF-6",
+          "itemName": "Farm Fresh Eggs 6 pcs",
+          "quantity": 1
+        }
+      ]
+    }
+  ]
+}
