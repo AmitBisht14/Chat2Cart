@@ -194,3 +194,19 @@ def test_every_item_ends_with_exactly_one_variant_or_one_skip_reason() -> None:
 
     assert [r.name for r in resolved] == ["eggs", "atta"]
     assert [(s.name, s.reason) for s in skipped] == [("dragonfruit", "no_match")]
+
+
+def test_two_items_resolved_to_the_same_variant_become_one_line_with_both_sources() -> None:
+    transport = FakeSwiggyTransport(
+        *NO_HINTS,
+        load_swiggy_fixture("search_products_eggs"),
+        load_swiggy_fixture("search_products_eggs"),
+    )
+    items = [
+        item("eggs", brands=["Farm Fresh"], size="30 pcs").model_copy(update={"sources": ["m1"]}),
+        item("ande", brands=["Farm Fresh"], size="30 pcs").model_copy(update={"sources": ["m2"]}),
+    ]
+
+    resolved, _ = asyncio.run(resolve_items(items, logged_in_client(transport), ADDRESS_ID))
+
+    assert [(r.spin_id, r.sources) for r in resolved] == [("EGG-FF-30", ["m1", "m2"])]

@@ -23,6 +23,7 @@ class ExtractedItem(BaseModel):
     name: str
     quantity: Decimal | None = Field(default=None, gt=0)
     unit: Unit | None = None
+    sources: list[str] = Field(default_factory=list)
 
 
 class Extraction(BaseModel):
@@ -49,6 +50,7 @@ class PreferencedItem(BaseModel):
     brands: list[str]
     size: str | None
     substitute: Substitute
+    sources: list[str] = Field(default_factory=list)
 
 
 class ResolvedItem(BaseModel):
@@ -59,3 +61,4 @@ class ResolvedItem(BaseModel):
     sku_id: str
     variant_name: str
     quantity: int = Field(ge=1)
+    sources: list[str] = Field(default_factory=list)
