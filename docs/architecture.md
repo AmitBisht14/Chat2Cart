@@ -9,3 +9,7 @@ Within one batch, duplicates are merged, never summed, so repeated reminders can
 ## Cart merge rule
 
 `update_cart` replaces the whole cart, so every write is the full list: the lines already in the cart (hand-added ones included) plus the new items. When a variant is already in the cart, the larger quantity is kept, never the sum, so a job that is retried does not double it. After the write the cart is read back and any difference from the intended list is reported.
+
+## Overnight batch
+
+An overnight release produces one cart job, not one per request. Every queued request is released together, its items are tagged with the message they came from, and the pipeline then merges repeats by name and by variant (see "Batch dedupe rule"), so the morning has a single cart to review and each line still names its messages.

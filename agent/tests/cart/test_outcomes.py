@@ -147,7 +147,7 @@ def test_capped_items_carry_the_requested_and_applied_quantities_and_the_reason_
         {"spinId": "S1", "itemName": "Atta", "requestedQuantity": 30, "cappedQuantity": 20}
     )
 
-    (item,) = capped_items([reduced])
+    (item,) = capped_items([reduced], [])
 
     assert (item.reason, item.requested, item.applied) == ("capped", 30, 20)
 

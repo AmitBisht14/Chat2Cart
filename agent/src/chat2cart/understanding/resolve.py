@@ -145,4 +145,4 @@ def _counted_as_packs(quantity: Decimal, candidates: list[Variant]) -> list[tupl
 
 
 def _skip(item: PreferencedItem, reason: str) -> SkippedItem:
-    return SkippedItem(name=item.name, reason=reason)
+    return SkippedItem(name=item.name, reason=reason, sources=item.sources)

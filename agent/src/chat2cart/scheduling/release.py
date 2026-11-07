@@ -13,18 +13,19 @@ from chat2cart.scheduling.window import OrderingWindow, is_within_window
 RELEASE_JOB_ID = "release-queue"
 RELEASE_QUEUED = """
     UPDATE request_queue SET status = 'released', released_at = ?
-    WHERE status = 'queued' RETURNING id, inbound_id, items_json"""
+    WHERE status = 'queued' RETURNING id, inbound_id, items_json, queued_at"""
 INSERT_JOB = (
     "INSERT INTO cart_jobs (source, payload_json, status, created_at)"
-    " VALUES ('queue', ?, 'pending', ?)"
+    " VALUES ('overnight_batch', ?, 'pending', ?)"
 )
 
 
 def release_queue(conn: sqlite3.Connection, now: datetime, window: OrderingWindow) -> list[int]:
-    """Turn every queued request into a cart job. Does nothing outside the ordering window.
+    """Turn every queued request into one cart job. Does nothing outside the ordering window.
 
-    One transaction marks the rows released and creates their jobs, so the same request can never
-    be released twice, even by two threads or two starts at once. Returns the new job ids.
+    All the requests released together form a single batch, so the morning has one cart to review.
+    One transaction marks the rows released and creates the job, so the same request can never be
+    released twice, even by two threads or two starts at once. Returns the new job ids: none or one.
     """
     if not is_within_window(now, window):
         return []
@@ -32,13 +33,13 @@ def release_queue(conn: sqlite3.Connection, now: datetime, window: OrderingWindo
     conn.execute("BEGIN IMMEDIATE")
     try:
         released = conn.execute(RELEASE_QUEUED, (stamp,)).fetchall()
-        job_ids = [_insert_job(conn, row, stamp) for row in released]
+        job_ids = [_insert_batch_job(conn, released, stamp)] if released else []
         conn.commit()
     except sqlite3.Error:
         conn.rollback()
         raise
     if job_ids:
-        structlog.get_logger().info("queue_released", requests=len(job_ids))
+        structlog.get_logger().info("queue_released", requests=len(released))
     return job_ids
 
 
@@ -80,13 +81,23 @@ def build_scheduler(window: OrderingWindow, release: Callable[[], object]) -> Ba
     return scheduler
 
 
-def _insert_job(conn: sqlite3.Connection, row: sqlite3.Row, created_at: str) -> int:
+def _insert_batch_job(
+    conn: sqlite3.Connection, released: list[sqlite3.Row], created_at: str
+) -> int:
+    """One job for the whole batch. Each item is tagged with the message it came from, so the
+    pipeline's dedupe can merge repeats and still say where every line came from."""
+    in_order = sorted(released, key=lambda row: (row["queued_at"], row["id"]))
     payload = {
-        "inbound_ids": [row["inbound_id"]],
-        "queue_ids": [row["id"]],
-        "extracted": json.loads(row["items_json"]),
+        "inbound_ids": [row["inbound_id"] for row in in_order],
+        "queue_ids": [row["id"] for row in in_order],
+        "extracted": [item for row in in_order for item in _items_of(row)],
     }
     cursor = conn.execute(INSERT_JOB, (json.dumps(payload), created_at))
     if cursor.lastrowid is None:
         raise sqlite3.DatabaseError("The cart job was not stored.")
     return cursor.lastrowid
+
+
+def _items_of(row: sqlite3.Row) -> list[dict[str, object]]:
+    items: list[dict[str, object]] = json.loads(row["items_json"])
+    return [{**item, "sources": [row["inbound_id"]]} for item in items]

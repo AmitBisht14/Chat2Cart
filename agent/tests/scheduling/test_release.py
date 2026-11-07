@@ -71,19 +71,19 @@ def test_the_scheduler_has_one_release_job_that_still_fires_after_a_sleep() -> N
     assert str(job.trigger.timezone) == "Asia/Kolkata"
 
 
-def test_the_release_at_0700_turns_each_queued_request_into_a_cart_job(
+def test_the_release_at_0700_turns_the_queued_requests_into_one_cart_job(
     conn: sqlite3.Connection,
 ) -> None:
     queue_overnight(conn, "m1", "m2")
 
     job_ids = release_queue(conn, ist(7, 0), Window())
 
-    jobs = rows(conn, "cart_jobs")
-    assert [job["id"] for job in jobs] == job_ids
-    assert [(job["source"], job["status"]) for job in jobs] == [("queue", "pending")] * 2
-    payload = json.loads(jobs[0]["payload_json"])
-    assert (payload["inbound_ids"], payload["queue_ids"]) == (["m1"], [1])
-    assert [item["name"] for item in payload["extracted"]] == ["atta"]
+    (job,) = rows(conn, "cart_jobs")
+    assert job_ids == [job["id"]]
+    assert (job["source"], job["status"]) == ("overnight_batch", "pending")
+    payload = json.loads(job["payload_json"])
+    assert (payload["inbound_ids"], payload["queue_ids"]) == (["m1", "m2"], [1, 2])
+    assert [item["name"] for item in payload["extracted"]] == ["atta", "atta"]
     released = rows(conn, "request_queue")
     assert [(row["status"], row["released_at"] is not None) for row in released] == [
         ("released", True)
@@ -100,7 +100,7 @@ def test_a_start_inside_the_window_releases_what_the_night_left_and_one_before_i
     at_09_40 = release_queue(conn, ist(9, 40), Window())
 
     assert (at_03_00, still_queued) == ([], ["queued"])
-    assert len(at_09_40) == 1
+    assert len(at_09_40) == 1  # one batch job for what the night left
 
 
 def test_nothing_is_released_after_the_window_closes(conn: sqlite3.Connection) -> None:
@@ -116,11 +116,11 @@ def test_the_same_requests_are_never_released_twice(conn: sqlite3.Connection) ->
     first = release_queue(conn, ist(7, 0), Window())
     second = release_queue(conn, ist(7, 1), Window())
 
-    assert (len(first), second) == (2, [])
-    assert len(rows(conn, "cart_jobs")) == 2
+    assert (len(first), second) == (1, [])
+    assert len(rows(conn, "cart_jobs")) == 1
 
 
-def test_two_threads_releasing_at_once_still_make_one_job_per_request(
+def test_two_threads_releasing_at_once_still_make_one_job(
     db_path: Path, conn: sqlite3.Connection
 ) -> None:
     queue_overnight(conn, "m1", "m2", "m3")
@@ -138,8 +138,8 @@ def test_two_threads_releasing_at_once_still_make_one_job_per_request(
     for thread in threads:
         thread.join()
 
-    assert sorted(len(ids) for ids in released) == [0, 3]
-    assert len(rows(conn, "cart_jobs")) == 3
+    assert sorted(len(ids) for ids in released) == [0, 1]
+    assert len(rows(conn, "cart_jobs")) == 1
 
 
 @pytest.mark.parametrize(

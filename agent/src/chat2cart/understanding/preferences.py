@@ -21,7 +21,7 @@ def apply_preferences(
     for item in dedupe_by_name(items):
         rule = rulebook.get(normalise_name(item.name))
         if rule is None:
-            skipped.append(SkippedItem(name=item.name, reason=NO_RULE))
+            skipped.append(SkippedItem(name=item.name, reason=NO_RULE, sources=item.sources))
         else:
             preferenced.append(_with_rule(item, rule))
     return preferenced, skipped

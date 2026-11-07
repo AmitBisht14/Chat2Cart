@@ -39,6 +39,7 @@ class SkippedItem(BaseModel):
 
     name: str
     reason: str
+    sources: list[str] = Field(default_factory=list)
 
 
 class PreferencedItem(BaseModel):
