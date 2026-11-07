@@ -1,10 +1,11 @@
 import asyncio
 import json
+from datetime import timedelta
 from urllib.parse import parse_qs
 
 import httpx
 import pytest
-from fakes.tokens import FakeTokenEndpoint, manager_for, stored_tokens
+from fakes.tokens import NOW, FakeTokenEndpoint, manager_for, stored_tokens
 
 from chat2cart.secrets import SWIGGY_TOKENS, InMemorySecretStore
 from chat2cart.swiggy.errors import AuthError, NeedsLoginError
@@ -99,3 +100,13 @@ def test_missing_tokens_ask_for_a_login() -> None:
     with pytest.raises(NeedsLoginError, match="chat2cart login swiggy"):
         manager.ensure_fresh()
     assert manager.needs_login()
+
+
+def test_expires_at_gives_only_the_expiry_and_none_without_usable_tokens() -> None:
+    store = InMemorySecretStore()
+    manager = manager_for(store, FakeTokenEndpoint())
+    assert manager.expires_at() is None
+
+    stored_tokens(store, seconds_left=3600)
+
+    assert manager.expires_at() == NOW + timedelta(seconds=3600)
