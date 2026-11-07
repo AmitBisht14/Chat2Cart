@@ -1,7 +1,7 @@
 import asyncio
 import sqlite3
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import structlog
 
@@ -20,19 +20,27 @@ def message_handler(
     window: OrderingWindow,
     get_llm: Callable[[], StructuredLLM],
     clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    debounce_minutes: int = 0,
+    schedule_release: Callable[[datetime], None] = lambda _run_at: None,
 ) -> MessageHandler:
     """Decide what happens to each accepted message, by the time it arrives.
 
-    Inside the ordering window it becomes a cart job for the pipeline. Outside the window it is
-    only classified and its items extracted, then saved in the request queue for the morning. That
-    path never touches Swiggy: it has no Swiggy client.
+    Inside the ordering window, with no delay, it becomes a cart job for the pipeline. With a
+    delay (debounce_minutes), or outside the window, it is only classified and its items extracted,
+    then saved in the request queue. At night the 07:00 release takes the queue; in the day
+    schedule_release is asked to release it when the delay ends, so quick messages become one job.
+    This path never touches Swiggy: it has no Swiggy client.
     """
 
     def handle(conn: sqlite3.Connection, message: InboxMessage) -> None:
-        if is_within_window(clock(), window):
+        now = clock()
+        in_window = is_within_window(now, window)
+        if in_window and debounce_minutes == 0:
             enqueue_message_job(conn, message)
-        else:
-            asyncio.run(_queue_for_morning(conn, message, get_llm()))
+            return
+        queued = asyncio.run(_queue_request(conn, message, get_llm()))
+        if queued and in_window:
+            schedule_release(now + timedelta(minutes=debounce_minutes))
 
     return handle
 
@@ -42,15 +50,17 @@ def enqueue_message_job(conn: sqlite3.Connection, message: InboxMessage) -> None
     enqueue_job(conn, "message", {"inbound_ids": [message.id], "text": message.text})
 
 
-async def _queue_for_morning(
+async def _queue_request(
     conn: sqlite3.Connection, message: InboxMessage, llm: StructuredLLM
-) -> None:
+) -> bool:
+    """Understand a message and save its items in the request queue. True if anything was queued."""
     intent = await classify_message(message.text, llm)
     if intent.order_text is None:
-        return
+        return False
     items = await extract_items(intent.order_text, llm)
     if not items:
-        return
+        return False
     sourced = [item.model_copy(update={"sources": [message.id]}) for item in items]
     enqueue_request(conn, message.id, sourced)
     structlog.get_logger().info("queue.enqueued", inbound_id=message.id, items=len(sourced))
+    return True

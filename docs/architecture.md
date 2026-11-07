@@ -13,3 +13,7 @@ Within one batch, duplicates are merged, never summed, so repeated reminders can
 ## Overnight batch
 
 An overnight release produces one cart job, not one per request. Every queued request is released together, its items are tagged with the message they came from, and the pipeline then merges repeats by name and by variant (see "Batch dedupe rule"), so the morning has a single cart to review and each line still names its messages.
+
+## Daytime batching delay
+
+`CHAT2CART_DAYTIME_DEBOUNCE_MINUTES` (default 0) groups quick messages during the day. With 0, each message becomes a cart job at once. With a delay, an order message is understood and saved in the request queue, and one timer, set by the first message of the group, releases the queue when the delay ends; later messages join the open group without moving the timer, and the release makes one cart job for the group. A timer that fires after the window closes releases nothing, and the 07:00 release takes the group. If the app restarts while a group is waiting, the start-up release picks it up.

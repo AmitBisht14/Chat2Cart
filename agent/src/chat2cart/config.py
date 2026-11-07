@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from zoneinfo import ZoneInfo
 
 import typer
-from pydantic import BeforeValidator, ValidationError, field_validator
+from pydantic import BeforeValidator, Field, ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ENV_PREFIX = "CHAT2CART_"
@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     sender_phone: PhoneNumber
     window_start: time = time(7, 0)
     window_end: time = time(22, 30)
+    daytime_debounce_minutes: int = Field(default=0, ge=0)
     timezone: str = "Asia/Kolkata"
     default_address_id: str | None = None
     rulebook_path: Path
