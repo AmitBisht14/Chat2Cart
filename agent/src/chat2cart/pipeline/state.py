@@ -6,8 +6,9 @@ from typing import TypedDict
 from pydantic import BaseModel, Field
 
 from chat2cart.cart.merge import CartDiff, MergeResult
+from chat2cart.cart.outcomes import CappedItem
 from chat2cart.llm.adapter import StructuredLLM
-from chat2cart.swiggy.cart import CartItem, ReducedItem
+from chat2cart.swiggy.cart import CartItem
 from chat2cart.swiggy.client import SwiggyClient
 from chat2cart.understanding.rulebook import RuleEntry
 from chat2cart.understanding.schemas import (
@@ -46,9 +47,10 @@ class RunReport(BaseModel):
     added: list[ResolvedItem]
     skipped: list[SkippedItem]
     removed: list[CartItem]
-    reduced: list[ReducedItem]
+    reduced: list[CappedItem]
     diffs: list[CartDiff]
     total: Decimal | None
+    below_minimum: bool
     sources: list[str]
 
 
