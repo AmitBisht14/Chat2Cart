@@ -1,7 +1,8 @@
 import asyncio
+import time
 
 import pytest
-from fakes.stub_model import StubModel, answering
+from fakes.stub_model import LoopBoundModel, StubModel, answering
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from pydantic import BaseModel
 
@@ -27,10 +28,19 @@ def test_a_valid_result_is_returned_as_the_schema_instance() -> None:
     assert result == Answer(label="order")
 
 
+def test_the_adapter_works_across_separate_event_loops() -> None:
+    adapter = LLMAdapter(LoopBoundModel(Answer(label="order")))
+
+    first = asyncio.run(adapter.structured(Answer, "s", "u"))
+    second = asyncio.run(adapter.structured(Answer, "s", "u"))
+
+    assert first == second == Answer(label="order")
+
+
 def test_the_model_gets_the_system_and_user_messages_and_no_tools() -> None:
     seen: list[list[BaseMessage]] = []
 
-    async def respond(messages: list[BaseMessage]) -> object:
+    def respond(messages: list[BaseMessage]) -> object:
         seen.append(messages)
         return Answer(label="order")
 
@@ -46,8 +56,8 @@ def test_a_dict_result_is_validated_against_the_schema() -> None:
 
 
 def test_a_slow_model_raises_a_timeout_error() -> None:
-    async def slow(_messages: list[BaseMessage]) -> object:
-        await asyncio.sleep(5)
+    def slow(_messages: list[BaseMessage]) -> object:
+        time.sleep(0.2)
         return Answer(label="late")
 
     adapter = LLMAdapter(StubModel(slow), timeout_seconds=0.01)

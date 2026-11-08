@@ -75,8 +75,11 @@ class LLMAdapter:
         """Ask the model for an answer in `schema`. The model gets no tools."""
         runnable = self._model.with_structured_output(schema)
         messages: list[BaseMessage] = [SystemMessage(system), HumanMessage(user)]
+        # A worker thread and the sync client: LangChain caches its async HTTP client, which
+        # outlives the event loop of one cart job (each job runs in its own asyncio.run).
+        call = asyncio.to_thread(runnable.invoke, messages)
         try:
-            result = await asyncio.wait_for(runnable.ainvoke(messages), self._timeout_seconds)
+            result = await asyncio.wait_for(call, self._timeout_seconds)
         except TimeoutError as error:
             raise LLMTimeoutError(
                 f"The language model did not answer within {self._timeout_seconds:g} seconds."
