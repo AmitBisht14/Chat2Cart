@@ -40,8 +40,13 @@ export function senderFilter(deps: SenderFilterDeps, message: WAMessage): Sender
   return { accepted: true, senderPn, senderJid };
 }
 
+// A direct chat can carry an empty-string participant; `??` would keep it and hide the real sender.
 function senderJidOf(key: MessageKey): string | undefined {
-  return key.participant ?? key.remoteJid ?? undefined;
+  return (
+    [key.participant, key.remoteJid].find(
+      (jid) => jid !== null && jid !== undefined && jid !== "",
+    ) ?? undefined
+  );
 }
 
 function resolvePhoneNumber(
