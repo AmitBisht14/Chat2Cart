@@ -63,6 +63,26 @@ it("accepts_the_allowed_number_whatever_its_device_suffix", () => {
   expect(decision.accepted).toBe(true);
 });
 
+it("accepts_the_allowed_number_when_the_participant_is_an_empty_string", () => {
+  const decision = filter({ remoteJid: `${ALLOWED}@s.whatsapp.net`, participant: "" });
+
+  expect(decision).toEqual({
+    accepted: true,
+    senderPn: ALLOWED,
+    senderJid: `${ALLOWED}@s.whatsapp.net`,
+  });
+});
+
+it("accepts_a_lid_with_the_allowed_number_when_the_participant_is_an_empty_string", () => {
+  const decision = filter({
+    remoteJid: `${LID}@lid`,
+    remoteJidAlt: `${ALLOWED}@s.whatsapp.net`,
+    participant: "",
+  });
+
+  expect(decision).toMatchObject({ accepted: true, senderPn: ALLOWED });
+});
+
 it("accepts_a_lid_with_the_allowed_number_in_the_alternate_field_and_stores_the_pair", () => {
   const decision = filter({
     remoteJid: `${LID}@lid`,
