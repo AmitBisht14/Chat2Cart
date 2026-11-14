@@ -461,7 +461,7 @@ The goal is for development to run automatically on a GitHub repository: user st
 - Proposed flow per story: pick the next ready issue, create a branch, implement, run the tests, open a pull request, merge when checks pass, then move to the next story.
 - CI must run on Claude's pull requests. GitHub does not trigger workflows for commits pushed with the default token, so the action should push as the Claude GitHub App.
 - Costs: GitHub Actions minutes, plus API usage or the Claude subscription.
-- **Open:** whether merges happen automatically or after the user's review. Changes to the tool allowlist should always get human review.
+- **Decided (14 Nov 2026):** merges happen automatically, but only through a squash-merged pull request with the required checks green: `main` is protected by the `protect-main` ruleset (`docs/repository-settings.md`). Changes to the tool allowlist should always get human review.
 
 ### 12.3 Validation at Each Step
 

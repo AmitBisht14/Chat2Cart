@@ -22,11 +22,13 @@ Repository: AmitBisht14/Chat2Cart (default branch `main`).
   .gitignore
   Dockerfile  compose.yaml  .dockerignore   toolchain-only image; `docker compose run --rm check|shell`
   .github/workflows/ci.yml      runs `make check` on pull_request and push to main
+  .github/rulesets/protect-main.json   ruleset for `main` (import in Settings; docs/repository-settings.md)
   ecosystem.config.cjs          pm2: apps "chat2cart-listener" and "chat2cart-agent"
   rulebook.example.md           example rule book
   scripts/story-runner.sh       story loop (P02)
   scripts/story-runner/instructions.md   fixed instructions given to `claude -p` for every story
   docs/validation/              milestone-0.md, cart-behaviour.md, release-checklist.md
+  docs/repository-settings.md  the protect-main ruleset: rules, import, verify, troubleshooting
   docs/architecture.md          short architecture notes (kept up to date by stories that change it)
   listener/
     package.json  tsconfig.json  eslint.config.js  vitest.config.ts
