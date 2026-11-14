@@ -67,6 +67,10 @@ git commit --allow-empty -m "test: direct push" && git push origin HEAD:main
    `gh pr update-branch`) and wait again.
 3. Resolve every review conversation, then **Squash and merge**.
 
+`scripts/story-runner.sh` follows the same path: after opening the pull request it waits for the checks,
+runs `gh pr update-branch` when the pull request is behind `main` (at most 3 times), and then squash-merges.
+A failing check stops the runner and leaves the pull request open.
+
 ## Emergency switch
 
 To get past the ruleset in an emergency, set its enforcement to **Disabled** in Settings (it is kept, not

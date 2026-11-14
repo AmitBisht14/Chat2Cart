@@ -6,6 +6,9 @@ set -euo pipefail
 BUDGET_USD="${BUDGET_USD:-5}"
 ALLOWLIST_FILE="agent/src/chat2cart/swiggy/allowlist.py"
 INSTRUCTIONS_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/story-runner/instructions.md"
+MAX_UPDATE_ROUNDS=3
+CHECKS_START_TIMEOUT_SECONDS=120
+POLL_SECONDS=10
 DRY_RUN=0
 
 main() {
@@ -116,8 +119,57 @@ open_and_merge_pr() {
     echo "Review needed before merging: ${url:-<pull request>}"
     exit 2
   fi
-  mutate gh pr merge --squash --delete-branch
+  merge_when_green "${url:-<pull request>}"
   mutate git checkout main
+  mutate git pull
+}
+
+# The protect-main ruleset refuses a merge until the required checks pass on a branch that is up to date
+# with main, so wait for them and update the branch whenever main has moved.
+merge_when_green() {
+  local url="$1" round
+  for ((round = 1; round <= MAX_UPDATE_ROUNDS; round++)); do
+    wait_for_checks "$url"
+    if ! is_behind_main "$url"; then
+      mutate gh pr merge "$url" --squash --delete-branch
+      return 0
+    fi
+    mutate gh pr update-branch "$url"
+  done
+  echo "Branch is still behind main after ${MAX_UPDATE_ROUNDS} updates: ${url}" >&2
+  exit 1
+}
+
+wait_for_checks() {
+  if ((DRY_RUN)); then
+    echo "[dry-run] gh pr checks ${1:-<pull request>} --watch --fail-fast"
+    return 0
+  fi
+  wait_for_checks_to_start "$1"
+  if ! gh pr checks "$1" --watch --fail-fast; then
+    echo "Required checks failed: $1" >&2
+    exit 1
+  fi
+}
+
+# Right after a push GitHub has not registered the new runs yet, and `gh pr checks` would report none.
+wait_for_checks_to_start() {
+  local waited=0
+  until (($(gh pr view "$1" --json statusCheckRollup --jq '.statusCheckRollup | length') > 0)); do
+    if ((waited >= CHECKS_START_TIMEOUT_SECONDS)); then
+      echo "No checks started within ${CHECKS_START_TIMEOUT_SECONDS}s: $1" >&2
+      exit 1
+    fi
+    sleep "$POLL_SECONDS"
+    waited=$((waited + POLL_SECONDS))
+  done
+}
+
+is_behind_main() {
+  if ((DRY_RUN)); then
+    return 1
+  fi
+  [[ "$(gh pr view "$1" --json mergeStateStatus --jq .mergeStateStatus)" == "BEHIND" ]]
 }
 
 needs_manual_review() {
