@@ -1,4 +1,6 @@
+import signal
 import sqlite3
+import threading
 from collections.abc import Iterator
 from contextlib import closing, contextmanager
 from datetime import UTC, datetime
@@ -35,6 +37,9 @@ from chat2cart.scheduling.release import (
 from chat2cart.secrets import KeychainSecretStore
 from chat2cart.swiggy.errors import BadInputError
 from chat2cart.understanding.rulebook import RuleBookError, load_rulebook
+
+HEALTH_POLL_SECONDS = 5.0
+PART_DIED_EXIT_CODE = 1
 
 
 class Part(Protocol):
@@ -93,6 +98,27 @@ def main() -> Service:
     )
     structlog.get_logger().info("agent_started")
     return service
+
+
+def run_until_stopped(
+    service: Service, stop: threading.Event, poll_seconds: float = HEALTH_POLL_SECONDS
+) -> int:
+    """Block until stop is set or a part dies; the exit code tells the supervisor to restart."""
+    while not stop.wait(timeout=poll_seconds):
+        if not service.is_alive():
+            structlog.get_logger().error("agent_part_died")
+            service.stop()
+            return PART_DIED_EXIT_CODE
+    service.stop()
+    return 0
+
+
+def serve() -> int:
+    """Run the agent as a process: stop cleanly on SIGINT/SIGTERM, exit non-zero if a part dies."""
+    stop = threading.Event()
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, lambda *_: stop.set())
+    return run_until_stopped(main(), stop)
 
 
 def _now() -> datetime:
@@ -158,3 +184,7 @@ def _load_rulebook_or_exit(path: Path) -> None:
     structlog.get_logger().info(
         "rulebook_loaded", entries=len({entry.name for entry in entries.values()})
     )
+
+
+if __name__ == "__main__":
+    raise SystemExit(serve())
