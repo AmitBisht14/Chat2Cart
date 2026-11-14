@@ -30,13 +30,14 @@ def required_checks() -> list[str]:
     return [check["context"] for check in checks]
 
 
-def test_every_required_check_is_a_job_in_the_ci_workflow() -> None:
-    # GitHub names a workflow check after its job; a renamed job would block every merge.
-    assert set(required_checks()) <= ci_job_names()
+def test_the_required_checks_are_exactly_the_ci_jobs() -> None:
+    # GitHub names a workflow check after its job; a renamed job would block every merge,
+    # and a new job that is not required would not gate anything.
+    assert sorted(required_checks()) == sorted(ci_job_names())
 
 
-def test_both_ci_jobs_are_required() -> None:
-    assert {"check", "docker"} <= set(required_checks())
+def test_allowlist_changes_are_gated_by_a_required_check() -> None:
+    assert "allowlist-review" in required_checks()
 
 
 def test_the_ruleset_targets_the_default_branch_with_no_bypass() -> None:
