@@ -12,6 +12,8 @@
 - Baileys: `@whiskeysockets/baileys` is pinned exactly to `7.0.0-rc14`. Chosen over stable 6.7.x because its message keys carry the
   LID alt fields the sender filter needs (P20), and it has no git-URL dependency (6.7.x pulls `libsignal` from GitHub, which the Docker image cannot install).
 - Strict rule: never place an order. Checkout, payment and order-confirmation tools must never be called.
+- Protected `main` (ruleset `protect-main`, `docs/repository-settings.md`): never push to `main`. Every change
+  goes through a squash-merged pull request after the required checks `check` and `docker` pass.
 - Git: author and commit as `Amit Bisht <bishtamith@gmail.com>` (set `git config user.name/user.email` first).
   No Claude author, `Co-Authored-By` or session trailers in commit messages or PR descriptions.
 
