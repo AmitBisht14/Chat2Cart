@@ -7,6 +7,12 @@
   implementation plan and acceptance criteria strictly, before any code change.
 - Swiggy: every Swiggy call goes through `SwiggyClient` (`agent/src/chat2cart/swiggy/client.py`).
   Swiggy tools are never bound to the LLM; code decides which tool to call.
+- Agent graph: `docs/agent-graph.md` is the flowchart of the agentic structure (pipeline nodes, routing, state,
+  what each node calls, and the path from a WhatsApp message to the graph). Any change to it must update that page
+  in the same pull request: adding, removing, renaming or reordering a node, changing a routing function or edge,
+  changing the state a node reads or writes, changing which LLM or Swiggy call a node makes, or changing how jobs
+  reach the pipeline (inbox, request queue, release, cart worker). Code in `agent/src/chat2cart/pipeline/` is the
+  source of truth; if the page and the code disagree, fix the page.
 - Protected file: `agent/src/chat2cart/swiggy/allowlist.py` (the only Swiggy tools the code may call).
   Changes need human review; the story runner (P02) does not auto-merge them. The required check `allowlist-review`
   stays red on a pull request that changes it until the owner adds the label `allowlist-approved`. Never add that label.

@@ -30,6 +30,7 @@ Repository: AmitBisht14/Chat2Cart (default branch `main`).
   docs/validation/              milestone-0.md, cart-behaviour.md, release-checklist.md
   docs/repository-settings.md  the protect-main ruleset: rules, import, verify, troubleshooting
   docs/architecture.md          short architecture notes (kept up to date by stories that change it)
+  docs/agent-graph.md           Mermaid flowchart of the pipeline nodes (updated by any story that changes the agent graph)
   listener/
     package.json  tsconfig.json  eslint.config.js  vitest.config.ts
     src/
